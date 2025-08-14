@@ -1,3 +1,8 @@
+public/icons/**
+tmp-sites.json
+*lock.yaml
+.DS_Store
+
 # Logs
 logs
 *.log

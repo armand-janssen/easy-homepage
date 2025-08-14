@@ -1,0 +1,7 @@
+[tools]
+node = "22"
+pnpm = "latest"
+qdns = "latest"
+
+[env]
+NODE_ENV = "development"

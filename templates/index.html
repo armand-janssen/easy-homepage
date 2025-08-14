@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Easy Homepage</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f0f2f5;
+    }
+    header {
+      background: #0078d7;
+      color: white;
+      padding: 1rem;
+      text-align: center;
+      font-size: 1.5rem;
+    }
+    nav {
+      display: flex;
+      flex-wrap: wrap;
+      background: #eee;
+      border-bottom: 1px solid #ccc;
+    }
+    nav button {
+      flex: 1;
+      padding: 0.75rem;
+      border: none;
+      background: #eee;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    nav button.active {
+      background: #fff;
+      border-bottom: 3px solid #0078d7;
+    }
+    .tab-content {
+      padding: 1rem;
+      display: none;
+    }
+    .tab-content.active {
+      display: block;
+    }
+    .category {
+      margin-bottom: 1.5rem;
+    }
+    .category h2 {
+      font-size: 1.2rem;
+      margin-bottom: 0.5rem;
+    }
+    .links {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 1rem;
+    }
+    .link-card {
+      background: white;
+      border-radius: 8px;
+      padding: 0.5rem;
+      text-align: center;
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+      transition: transform 0.2s;
+    }
+    .link-card:hover {
+      transform: translateY(-3px);
+    }
+    .link-card img {
+      width: 48px;
+      height: 48px;
+      margin-bottom: 0.5rem;
+    }
+    .link-card a {
+      text-decoration: none;
+      color: #333;
+      font-size: 0.9rem;
+      word-break: break-word;
+    }
+    @media (max-width: 600px) {
+      nav button {
+        font-size: 0.85rem;
+      }
+      .link-card img {
+        width: 36px;
+        height: 36px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>Easy Homepage</header>
+  <nav id="tabs"></nav>
+  <div id="tab-contents"></div>
+
+  <script>
+    async function fetchSites() {
+      const res = await fetch('/api/sites');
+      return res.json();
+    }
+
+    function createTabButton(tabName, index) {
+      const btn = document.createElement('button');
+      btn.textContent = tabName;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+        document.getElementById('tab-' + index).classList.add('active');
+      });
+      return btn;
+    }
+
+    function createCategory(category) {
+      const div = document.createElement('div');
+      div.classList.add('category');
+
+      const title = document.createElement('h2');
+      title.textContent = category.category;
+      div.appendChild(title);
+
+      const linksDiv = document.createElement('div');
+      linksDiv.classList.add('links');
+
+      category.links.forEach(link => {
+        const card = document.createElement('div');
+        card.classList.add('link-card');
+
+        const img = document.createElement('img');
+        img.src = link["icon-file"] ? `public/icons/${link["icon-file"]}` : `public/icons/default.png`;
+        img.alt = link.name;
+        card.appendChild(img);
+
+        const a = document.createElement('a');
+        a.href = link.url;
+        a.target = '_blank';
+        a.textContent = link.name;
+        card.appendChild(a);
+
+        linksDiv.appendChild(card);
+      });
+
+      div.appendChild(linksDiv);
+      return div;
+    }
+
+    async function renderTabs() {
+      const sites = await fetchSites();
+      const tabsNav = document.getElementById('tabs');
+      const tabContents = document.getElementById('tab-contents');
+
+      sites.tabs.forEach((tab, idx) => {
+        const btn = createTabButton(tab.tab, idx);
+        if (idx === 0) btn.classList.add('active');
+        tabsNav.appendChild(btn);
+
+        const tabDiv = document.createElement('div');
+        tabDiv.classList.add('tab-content');
+        if (idx === 0) tabDiv.classList.add('active');
+        tabDiv.id = 'tab-' + idx;
+
+        tab.categories.forEach(category => {
+          tabDiv.appendChild(createCategory(category));
+        });
+
+        tabContents.appendChild(tabDiv);
+      });
+    }
+
+    renderTabs();
+  </script>
+</body>
+</html>
