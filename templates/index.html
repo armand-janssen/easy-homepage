@@ -5,15 +5,17 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Easy Homepage</title>
   <style>
+    /* Dark mode styles for Easy Homepage */
     body {
       font-family: Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background: #f0f2f5;
+      background: #181a1b;
+      color: #e0e0e0;
     }
     header {
-      background: #0078d7;
-      color: white;
+      background: #222b3a;
+      color: #fff;
       padding: 1rem;
       text-align: center;
       font-size: 1.5rem;
@@ -21,69 +23,104 @@
     nav {
       display: flex;
       flex-wrap: wrap;
-      background: #eee;
-      border-bottom: 1px solid #ccc;
+      background: #23272e;
+      border-bottom: 1px solid #333;
     }
     nav button {
       flex: 1;
       padding: 0.75rem;
       border: none;
-      background: #eee;
+      background: #23272e;
+      color: #e0e0e0;
       cursor: pointer;
       font-weight: bold;
+      transition: background 0.2s;
     }
     nav button.active {
-      background: #fff;
-      border-bottom: 3px solid #0078d7;
+      background: #181a1b;
+      border-bottom: 3px solid #4f8cff;
+      color: #fff;
     }
     .tab-content {
-      padding: 1rem;
       display: none;
+      flex-direction: row;
+      gap: 2rem;
+      flex-wrap: wrap;
+      padding: 1rem;
     }
     .tab-content.active {
-      display: block;
+      display: flex;
     }
     .category {
-      margin-bottom: 1.5rem;
+      flex: 1 1 250px;
+      max-width: 320px;
+      min-width: 200px;
+      background: #23272e;
+      border-radius: 8px;
+      padding: 1rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+      margin-bottom: 0;
+      display: flex;
+      flex-direction: column;
     }
     .category h2 {
       font-size: 1.2rem;
       margin-bottom: 0.5rem;
+      color: #fff;
+      padding: 0.4em 0.8em;
+      border-radius: 6px;
+      background: #4f8cff;
     }
+    /* Alternate colors for more categories */
+    .category:nth-of-type(2) h2 { background: #43a047; }
+    .category:nth-of-type(3) h2 { background: #ffb300; color: #222; }
+    .category:nth-of-type(4) h2 { background: #e53935; }
+    .category:nth-of-type(5) h2 { background: #8e24aa; }
     .links {
-      display: grid;
-      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-      gap: 1rem;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
     }
     .link-card {
-      background: white;
-      border-radius: 8px;
-      padding: 0.5rem;
-      text-align: center;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-      transition: transform 0.2s;
-    }
-    .link-card:hover {
-      transform: translateY(-3px);
+      display: flex;
+      align-items: center;
+      padding: 4px 0;
+      border: none;
+      background: none;
+      box-shadow: none;
     }
     .link-card img {
-      width: 48px;
-      height: 48px;
-      margin-bottom: 0.5rem;
+      width: 24px;
+      height: 24px;
+      object-fit: contain;
+      margin-right: 8px;
+      vertical-align: middle;
+      filter: brightness(0.9) drop-shadow(0 0 1px #222);
+      background: #181a1b;
+      border-radius: 4px;
     }
     .link-card a {
       text-decoration: none;
-      color: #333;
+      color: #e0e0e0;
       font-size: 0.9rem;
       word-break: break-word;
+      transition: color 0.2s;
+    }
+    .link-card a:hover {
+      color: #4f8cff;
     }
     @media (max-width: 600px) {
       nav button {
         font-size: 0.85rem;
       }
-      .link-card img {
-        width: 36px;
-        height: 36px;
+      .tab-content {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 0.5rem;
+      }
+      .category {
+        max-width: 100%;
+        min-width: 0;
       }
     }
   </style>
