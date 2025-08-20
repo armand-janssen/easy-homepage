@@ -1,14 +1,17 @@
-version: "3.9"
 services:
   easy-links:
-    build: .
+    image: easy-homepage
+    container_name: easy-homepage
     ports:
       - "3000:3000"
     volumes:
-      - ./icons:/app/public/icons
+      - ./public/icons:/app/public/icons
       - ./data:/data
     environment:
-      - SITES_JSON_PATH=/data/sites.json
-      # - GITHUB_REPO=git@github.com:user/repo.git
-      # - GITHUB_SSH_KEY=/data/github_key
-      # - GITHUB_TOKEN=xxxx
+      - LOGO_DEV_API_KEY=${LOGO_DEV_API_KEY}
+      # Uncomment the next line for local file mode:
+      # - SITES_JSON_PATH=/data/private.json
+      - GITHUB_OWNER=armand-janssen
+      - GITHUB_REPO_NAME=my-config
+      - GITHUB_FILE_PATH=homepage/private.json
+      - GITHUB_TOKEN=${GITHUB_MY_CONFIG_READER_TOKEN}

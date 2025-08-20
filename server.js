@@ -10,7 +10,6 @@ import crypto from 'crypto';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
-const __logo_dev_api_key = "sk_GvAzcQWTS-SNkEru9pfQqw";
 
 const app = Fastify({ logger: true });
 
@@ -23,6 +22,11 @@ const HOME_JSON_PATH = process.env.SITES_JSON_PATH;
 const TMP_JSON_PATH = path.join(__dirname, 'tmp-sites.json');
 const DEFAULT_ICON_SRC = path.join(__dirname, 'templates', 'default.png');
 const ICONS_DIR = path.join(__dirname, 'public', 'icons');
+const GITHUB_OWNER = process.env.GITHUB_OWNER;
+const GITHUB_REPO_NAME = process.env.GITHUB_REPO_NAME;
+const GITHUB_FILE_PATH = process.env.GITHUB_FILE_PATH;
+const GITHUB_TOKEN = process.env.GITHUB_TOKEN;
+const LOGO_DEV_API_KEY = process.env.LOGO_DEV_API_KEY;
 
 // Helper to hash home.json for change detection
 async function hashFile(filePath) {
@@ -34,14 +38,64 @@ async function hashFile(filePath) {
   }
 }
 
-// Load home.json
+// Helper to hash a string (for GitHub content)
+function hashString(str) {
+  return crypto.createHash('sha256').update(str).digest('hex');
+}
+
+// Helper to download JSON from GitHub
+async function fetchGithubJson() {
+  if (!GITHUB_OWNER || !GITHUB_REPO_NAME || !GITHUB_FILE_PATH) {
+    throw new Error('Missing GitHub environment variables');
+  }
+  const apiUrl = `https://api.github.com/repos/${GITHUB_OWNER}/${GITHUB_REPO_NAME}/contents/${GITHUB_FILE_PATH}`;
+  const headers = {
+    'Accept': 'application/vnd.github.v3.raw'
+  };
+  if (GITHUB_TOKEN) {
+    headers['Authorization'] = `Bearer ${GITHUB_TOKEN}`;
+  }
+   app.log.info('2');
+     const res = await fetch(apiUrl, { headers });
+  if (!res.ok) {
+    const errorText = await res.text();
+    app.log.error(`GitHub fetch error: status=${res.status} statusText=${res.statusText} url=${apiUrl} body=${errorText}`);
+    throw new Error(`Failed to fetch from GitHub: ${res.status} ${res.statusText} - ${errorText}`);
+  }
+      app.log.info('223');
+  return await res.text();
+}
+
 async function loadSites() {
+  // If GitHub env vars are set, fetch from GitHub
+      app.log.info(`GITHUB_OWNER: ${GITHUB_OWNER}`);
+      app.log.info(`GITHUB_REPO_NAME: ${GITHUB_REPO_NAME}`);
+      app.log.info(`GITHUB_FILE_PATH: ${GITHUB_FILE_PATH}`);
+      app.log.info(`GITHUB_TOKEN: ${GITHUB_TOKEN ? GITHUB_TOKEN.slice(0, 6) + '...' : ''}`);
+  if (GITHUB_OWNER && GITHUB_REPO_NAME && GITHUB_FILE_PATH) {
+      app.log.info('33');
+    try {
+      const jsonText = await fetchGithubJson();
+      app.log.info('1');
+      app.log.info(jsonText)
+      app.log.info('111');
+      return JSON.parse(jsonText);
+    } catch (err) {
+      app.log.error('Failed to fetch/parse JSON from GitHub:', err.message);
+      return { tabs: [] };
+    }
+  }
+        app.log.info('33-33');
+
+  // Otherwise, load from local file
   if (!HOME_JSON_PATH) {
     app.log.warn('No SITES_JSON_PATH provided, returning empty tabs.');
     return { tabs: [] };
   }
+        app.log.info('33-33-33');
   try {
     const data = await fs.readFile(HOME_JSON_PATH, 'utf8');
+        app.log.info('33-33-33-33');
     return JSON.parse(data);
   } catch (err) {
     app.log.error('Failed to read/parse JSON:', err.message);
@@ -73,7 +127,7 @@ async function getIcon(iconHint, name) {
       app.log.info(`Fetching logo for "${query}" from Logo.dev API: ${logoUrl}`);
       const res = await fetch(logoUrl, {
         headers: {
-          'Authorization': `Bearer ${__logo_dev_api_key}`,
+          'Authorization': `Bearer ${LOGO_DEV_API_KEY}`,
           'Accept': 'application/json'
         }
       });
@@ -137,8 +191,18 @@ async function loadTmpSitesJson() {
   let homeHash = '';
   let tmpHash = '';
 
+  let githubMode = GITHUB_OWNER && GITHUB_REPO_NAME && GITHUB_FILE_PATH;
+
   try {
-    homeHash = await hashFile(HOME_JSON_PATH);
+    if (githubMode) {
+      // Fetch GitHub content and hash it
+      const githubContent = await fetchGithubJson();
+      homeHash = hashString(githubContent);
+    } else {
+      // Hash local file
+      homeHash = await hashFile(HOME_JSON_PATH);
+    }
+
     const tmpData = await fs.readFile(TMP_JSON_PATH, 'utf8');
     const tmpSites = JSON.parse(tmpData);
     tmpHash = tmpSites._homeHash || '';
@@ -166,18 +230,10 @@ app.get('/api/sites', async () => {
 });
 
 app.get('/', async (req, reply) => {
-  const sites = await loadTmpSitesJson();
-  if (sites._homeHash) delete sites._homeHash;
-
-  try {
-    const templatePath = path.join(__dirname, 'templates', 'index.html');
-    let html = await fs.readFile(templatePath, 'utf8');
-    html = html.replace('<!--SITES_PLACEHOLDER-->', JSON.stringify(sites));
-    reply.type('text/html').send(html);
-  } catch (err) {
-    app.log.error('Failed to load HTML template:', err.message);
-    reply.status(500).send('Internal Server Error');
-  }
+  // Just serve the HTML, do not inject JSON
+  const templatePath = path.join(__dirname, 'templates', 'index.html');
+  let html = await fs.readFile(templatePath, 'utf8');
+  reply.type('text/html').send(html);
 });
 
 async function start() {

@@ -3,13 +3,11 @@ FROM node:22-alpine
 WORKDIR /app
 
 COPY package.json ./
-RUN npm install
+RUN npm install -g pnpm && pnpm install
 
 COPY . .
 
-VOLUME ["/app/public/icons", "/data"]
-
-ENV SITES_JSON_PATH=/data/sites.json
+USER node
 
 EXPOSE 3000
 CMD ["node", "server.js"]

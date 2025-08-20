@@ -4,7 +4,11 @@
   "type": "module",
   "scripts": {
     "clean": "rm -rf public/icons/* tmp-sites.json",
-    "start": "pnpm run clean && SITES_JSON_PATH=./home.json node server.js"
+    "start": "pnpm run clean && SITES_JSON_PATH=./home.json node server.js",
+    "start-github": "pnpm run clean && GITHUB_TOKEN=$GITHUB_MY_CONFIG_READER_TOKEN GITHUB_OWNER=armand-janssen GITHUB_REPO_NAME=my-config GITHUB_FILE_PATH=homepage/private.json node server.js",
+    "create-docker": "docker build -t easy-homepage .",
+    "start-docker": "docker-compose up -d",
+    "stop-docker": "docker-compose down"
   },
   "dependencies": {
     "@fastify/static": "^8.2.0",
