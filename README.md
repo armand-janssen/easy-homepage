@@ -3,6 +3,24 @@
 A simple Node.js application to serve your personal homepage with categorized links.  
 You can run it **directly with Node.js** or **using Docker**.
 
+- [Easy Homepage](#easy-homepage)
+  - [✅ Features](#-features)
+  - [📦 Requirements](#-requirements)
+  - [🚀 Run with Node.js](#-run-with-nodejs)
+    - [1. Clone the repository](#1-clone-the-repository)
+    - [2. Install dependencies](#2-install-dependencies)
+    - [3. Start the app](#3-start-the-app)
+      - [**Option A: Use a local `home.json` file**](#option-a-use-a-local-homejson-file)
+      - [**Option B: Fetch config from GitHub**](#option-b-fetch-config-from-github)
+  - [🐳 Run with Docker](#-run-with-docker)
+    - [**Option 1: Build \& run manually**](#option-1-build--run-manually)
+    - [**Option 2: Use provided scripts**](#option-2-use-provided-scripts)
+  - [⚙️ Configuration](#️-configuration)
+    - [Environment Variables](#environment-variables)
+  - [📄 Example Docker with GitHub Config](#-example-docker-with-github-config)
+  - [🗂 Custom JSON Example](#-custom-json-example)
+  - [✅ Available Scripts](#-available-scripts)
+
 ---
 
 ## ✅ Features
