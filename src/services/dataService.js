@@ -1,8 +1,12 @@
 const fs = require('fs').promises;
-const fetch = require('node-fetch');
 const path = require('path');
 const CacheManager = require('../utils/cache');
 const LogoService = require('./logoService');
+
+// Use native fetch (Node.js 18+) instead of node-fetch
+async function fetchWithNativeFetch(url, options = {}) {
+  return fetch(url, options);
+}
 
 class DataService {
   constructor(config) {
@@ -47,7 +51,7 @@ class DataService {
         headers['Authorization'] = `token ${token}`;
       }
 
-      const response = await fetch(githubUrl, { headers });
+      const response = await fetchWithNativeFetch(githubUrl, { headers });
       
       if (!response.ok) {
         throw new Error(`GitHub API error: ${response.status} ${response.statusText}`);

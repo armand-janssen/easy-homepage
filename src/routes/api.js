@@ -5,16 +5,18 @@ const DataService = require('../services/dataService');
  * @param {Object} fastify - Fastify instance
  * @param {Object} config - Configuration object
  */
-async function registerApiRoutes(fastify, config) {
+async function registerApiRoutes(fastify, options) {
+  const config = options.config;
   const dataService = new DataService(config);
 
-  // Initialize data service on startup
-  try {
-    await dataService.loadData();
-    fastify.log.info('Data service initialized successfully');
-  } catch (error) {
-    fastify.log.error('Failed to initialize data service:', error.message);
-  }
+  // Initialize data service on startup (async, non-blocking)
+  dataService.loadData()
+    .then(() => {
+      fastify.log.info('Data service initialized successfully');
+    })
+    .catch((error) => {
+      fastify.log.error('Failed to initialize data service:', error.message);
+    });
 
   // GET /api/links - Returns enriched JSON with logo paths
   fastify.get('/api/links', {
@@ -43,7 +45,8 @@ async function registerApiRoutes(fastify, config) {
                             properties: {
                               name: { type: 'string' },
                               url: { type: 'string' },
-                              iconHint: { type: 'string' },
+                              'icon-hint': { type: 'string' },
+                              'logo-hint': { type: 'string' },
                               logoPath: { type: 'string' }
                             }
                           }

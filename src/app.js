@@ -1,7 +1,12 @@
 const fastify = require('fastify')({
   logger: {
     level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
-    prettyPrint: process.env.NODE_ENV === 'development'
+    transport: process.env.NODE_ENV === 'development' ? {
+      target: 'pino-pretty',
+      options: {
+        colorize: true
+      }
+    } : undefined
   }
 });
 
@@ -15,6 +20,18 @@ async function buildApp() {
     await fastify.register(require('@fastify/static'), {
       root: path.join(__dirname, '../public'),
       prefix: '/'
+    });
+
+    // Custom route to serve logos
+    fastify.get('/logos/*', async (request, reply) => {
+      const logoPath = request.params['*'];
+      const fullPath = path.join(__dirname, '../logos', logoPath);
+      
+      try {
+        await reply.sendFile(logoPath, path.join(__dirname, '../logos'));
+      } catch (error) {
+        reply.code(404).send({ error: 'Logo not found' });
+      }
     });
 
     await fastify.register(require('@fastify/cors'), {

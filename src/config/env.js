@@ -25,7 +25,7 @@ const config = {
   logosDir: './logos',
   
   // Logo.dev API settings
-  logoDevBaseUrl: 'https://img.logo.dev',
+  logoDevBaseUrl: 'https://api.logo.dev/search',
   logoDevFormat: 'png'
 };
 

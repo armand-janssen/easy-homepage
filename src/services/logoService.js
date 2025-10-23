@@ -1,6 +1,10 @@
-const fetch = require('node-fetch');
 const fs = require('fs').promises;
 const path = require('path');
+
+// Use native fetch (Node.js 18+) instead of node-fetch
+async function fetchWithNativeFetch(url, options = {}) {
+  return fetch(url, options);
+}
 
 class LogoService {
   constructor(config) {
@@ -40,6 +44,23 @@ class LogoService {
   }
 
   /**
+   * Extract separate words from a name/title for fallback logo searches
+   * @param {string} name - The name/title to extract words from
+   * @returns {Array<string>} array of individual words
+   */
+  extractWordsFromName(name) {
+    // Split by common separators and clean up
+    const words = name
+      .split(/[\s\-_\.]+/) // Split by spaces, hyphens, underscores, dots
+      .map(word => word.trim())
+      .filter(word => word.length > 0)
+      .map(word => word.toLowerCase());
+    
+    // Remove duplicates while preserving order
+    return [...new Set(words)];
+  }
+
+  /**
    * Generate logo filename
    * @param {string} category - Category name
    * @param {string} linkName - Link name
@@ -68,51 +89,76 @@ class LogoService {
 
   /**
    * Download logo from logo.dev
-   * @param {string} domain - Domain name
+   * @param {string} searchTerm - Search term (name, domain, or word)
    * @param {string} filename - Local filename to save as
    * @returns {Promise<boolean>} true if successful
    */
-  async downloadLogo(domain, filename) {
+  async downloadLogo(searchTerm, filename) {
     try {
-      let logoUrl = `${this.logoDevBaseUrl}/${domain}?format=${this.logoDevFormat}`;
+      // Use the search API with query parameter
+      const logoUrl = `${this.logoDevBaseUrl}?q=${encodeURIComponent(searchTerm)}`;
       
-      if (this.logoDevToken) {
-        logoUrl += `&token=${this.logoDevToken}`;
-      }
-
-      console.log(`Fetching logo for ${domain}...`);
-      const response = await fetch(logoUrl);
+      console.log(`Fetching logo for "${searchTerm}" from Logo.dev API: ${logoUrl}`);
       
-      if (!response.ok) {
-        console.warn(`Failed to fetch logo for ${domain}: ${response.status} ${response.statusText}`);
+      if (!this.logoDevToken) {
+        console.warn(`No Logo.dev token available for ${searchTerm}`);
         return false;
       }
 
-      const buffer = await response.buffer();
+      const response = await fetchWithNativeFetch(logoUrl, {
+        headers: {
+          'Authorization': `Bearer ${this.logoDevToken}`,
+          'Accept': 'application/json'
+        }
+      });
+
+      if (!response.ok) {
+        console.warn(`Failed to fetch logo for ${searchTerm}: ${response.status} ${response.statusText}`);
+        return false;
+      }
+
+      const results = await response.json();
+      console.log(`API response for ${searchTerm}:`, results);
+      
+      if (!Array.isArray(results) || results.length === 0) {
+        console.warn(`No results found for ${searchTerm}`);
+        return false;
+      }
+
+      const logoPngUrl = results[0].logo_url;
+      if (!logoPngUrl) {
+        console.warn(`No logo_url found in results for ${searchTerm}`);
+        return false;
+      }
+
+      console.log(`Downloading logo image from: ${logoPngUrl}`);
+      
+      // Download the actual logo image
+      const imageResponse = await fetchWithNativeFetch(logoPngUrl);
+      if (!imageResponse.ok) {
+        console.warn(`Failed to download logo image for ${searchTerm}: ${imageResponse.status} ${imageResponse.statusText}`);
+        return false;
+      }
+
+      const buffer = Buffer.from(await imageResponse.arrayBuffer());
       const filepath = path.join(this.logosDir, filename);
       await fs.writeFile(filepath, buffer);
       
       console.log(`Logo saved: ${filename}`);
       return true;
     } catch (error) {
-      console.warn(`Error downloading logo for ${domain}:`, error.message);
+      console.warn(`Error downloading logo for ${searchTerm}:`, error.message);
       return false;
     }
   }
 
   /**
    * Process a single link and get its logo
-   * @param {Object} link - Link object with name, url, category
+   * @param {Object} link - Link object with name, url, category, logoHint
    * @returns {Promise<string|null>} logo path or null if failed
    */
   async processLink(link) {
-    const { name, url, category } = link;
-    const domain = this.extractDomain(url);
-    
-    if (!domain) {
-      return null;
-    }
-
+    const { name, url, category, logoHint } = link;
     const filename = this.generateLogoFilename(category, name);
     
     // Check if logo already exists
@@ -120,8 +166,34 @@ class LogoService {
       return `/logos/${filename}`;
     }
 
-    // Download new logo
-    const success = await this.downloadLogo(domain, filename);
+    let success = false;
+
+    // Priority 1: Try logo-hint attribute if provided
+    if (logoHint && logoHint.trim()) {
+      console.log(`Trying logo-hint: "${logoHint}"`);
+      success = await this.downloadLogo(logoHint.trim(), filename);
+    }
+
+    // Priority 2: Try using the link name
+    if (!success) {
+      console.log(`Trying link name: "${name}"`);
+      success = await this.downloadLogo(name, filename);
+    }
+    
+    // Priority 3: Try using separate words from the name
+    if (!success) {
+      const words = this.extractWordsFromName(name);
+      for (const word of words) {
+        if (word.length > 2) { // Only try words longer than 2 characters
+          console.log(`Trying fallback search with word: "${word}"`);
+          success = await this.downloadLogo(word, filename);
+          if (success) {
+            break;
+          }
+        }
+      }
+    }
+
     return success ? `/logos/${filename}` : null;
   }
 
@@ -145,7 +217,8 @@ class LogoService {
           const logoPath = await this.processLink({
             name: link.name,
             url: link.url,
-            category: category.category
+            category: category.category,
+            logoHint: link['logo-hint'] || link['icon-hint'] // Support both logo-hint and icon-hint
           });
           
           link.logoPath = logoPath;
