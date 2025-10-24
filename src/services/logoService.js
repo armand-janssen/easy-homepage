@@ -161,10 +161,8 @@ class LogoService {
     const { name, url, category, logoHint } = link;
     const filename = this.generateLogoFilename(category, name);
     
-    // Check if logo already exists
-    if (await this.logoExists(filename)) {
-      return `/logos/${filename}`;
-    }
+    // Note: Logo existence check is now done at the enrichWithLogos level
+    // This method is only called for links that don't have logos yet
 
     let success = false;
 
@@ -209,11 +207,25 @@ class LogoService {
     
     console.log('Starting logo enrichment process...');
     
+    let processedCount = 0;
+    let skippedCount = 0;
+    
     for (const tab of enrichedData.tabs) {
       for (const category of tab.categories) {
         console.log(`Processing category: ${category.category}`);
         
         for (const link of category.links) {
+          const filename = this.generateLogoFilename(category.category, link.name);
+          
+          // Check if logo already exists - if so, skip processing
+          if (await this.logoExists(filename)) {
+            link.logoPath = `/logos/${filename}`;
+            skippedCount++;
+            console.log(`Skipping existing logo: ${filename}`);
+            continue;
+          }
+          
+          // Only process links that don't have logos yet
           const logoPath = await this.processLink({
             name: link.name,
             url: link.url,
@@ -222,6 +234,7 @@ class LogoService {
           });
           
           link.logoPath = logoPath;
+          processedCount++;
           
           // Add a small delay to be respectful to logo.dev API
           await new Promise(resolve => setTimeout(resolve, 100));
@@ -229,7 +242,7 @@ class LogoService {
       }
     }
     
-    console.log('Logo enrichment completed');
+    console.log(`Logo enrichment completed - Processed: ${processedCount}, Skipped: ${skippedCount}`);
     return enrichedData;
   }
 
