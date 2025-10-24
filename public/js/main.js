@@ -2,9 +2,11 @@ class LinkHomepage {
     constructor() {
         this.data = null;
         this.activeTab = null;
+        this.currentLayout = 'default';
         this.themeToggle = document.getElementById('theme-toggle');
         this.refreshBtn = document.getElementById('refresh-btn');
         this.retryBtn = document.getElementById('retry-btn');
+        this.layoutSelector = document.getElementById('layout-selector');
         this.appTitle = document.getElementById('app-title');
         this.loadingState = document.getElementById('loading-state');
         this.errorState = document.getElementById('error-state');
@@ -17,6 +19,7 @@ class LinkHomepage {
 
     async init() {
         this.setupThemeToggle();
+        this.setupLayoutSelector();
         this.setupRefreshButton();
         this.setupRetryButton();
         await this.loadData();
@@ -32,6 +35,369 @@ class LinkHomepage {
             const isDark = document.documentElement.classList.contains('dark');
             localStorage.setItem('theme', isDark ? 'dark' : 'light');
         });
+    }
+
+    setupLayoutSelector() {
+        // Load saved layout or default to default
+        const savedLayout = localStorage.getItem('layout') || 'default';
+        this.currentLayout = savedLayout;
+        this.layoutSelector.value = savedLayout;
+        
+        // Apply initial layout
+        this.applyLayout(savedLayout);
+
+        this.layoutSelector.addEventListener('change', (e) => {
+            const selectedLayout = e.target.value;
+            this.currentLayout = selectedLayout;
+            localStorage.setItem('layout', selectedLayout);
+            this.applyLayout(selectedLayout);
+            
+            // Re-render content with new layout
+            if (this.data) {
+                this.renderTabContent();
+            }
+        });
+    }
+
+    applyLayout(layoutName) {
+        // Remove all layout classes
+        document.body.classList.remove('layout-default', 'layout-columns', 'layout-columns-vertical', 'layout-creative');
+        
+        // Add current layout class
+        document.body.classList.add(`layout-${layoutName}`);
+        
+        // Inject layout-specific CSS
+        this.injectLayoutCSS(layoutName);
+    }
+
+    injectLayoutCSS(layoutName) {
+        // Remove existing layout styles
+        const existingStyle = document.getElementById('layout-styles');
+        if (existingStyle) {
+            existingStyle.remove();
+        }
+
+        const style = document.createElement('style');
+        style.id = 'layout-styles';
+        
+        if (layoutName === 'columns') {
+            style.textContent = `
+                .layout-columns {
+                    --primary-color: #8b5cf6;
+                    --primary-hover: #7c3aed;
+                    --primary-light: #a78bfa;
+                    --primary-dark: #6d28d9;
+                    --bg-primary: #faf5ff;
+                    --bg-secondary: #f3e8ff;
+                    --text-primary: #581c87;
+                    --text-secondary: #7c2d12;
+                    --border-color: #c4b5fd;
+                }
+                
+                .layout-columns.dark {
+                    --bg-primary: #1e1b4b;
+                    --bg-secondary: #312e81;
+                    --text-primary: #e0e7ff;
+                    --text-secondary: #c7d2fe;
+                    --border-color: #6366f1;
+                }
+                
+                .layout-columns #tab-content {
+                    display: flex !important;
+                    flex-direction: row !important;
+                    gap: 1.5rem !important;
+                    flex-wrap: nowrap !important;
+                    align-items: flex-start !important;
+                    width: 100% !important;
+                    overflow-x: auto !important;
+                    max-width: none !important;
+                }
+                
+                .layout-columns .max-w-7xl {
+                    max-width: none !important;
+                }
+                
+                .layout-columns .category-column {
+                    flex: 0 0 auto;
+                    width: 280px;
+                    background: var(--bg-secondary);
+                    border-radius: 12px;
+                    padding: 1.5rem;
+                    border: 1px solid var(--border-color);
+                }
+                
+                .layout-columns .category-title {
+                    color: var(--text-primary);
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    margin-bottom: 1rem;
+                    padding-bottom: 0.5rem;
+                    border-bottom: 2px solid var(--primary-color);
+                }
+                
+                .layout-columns .links-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
+                
+                .layout-columns .link-item {
+                    background: var(--bg-primary);
+                    border: 1px solid var(--border-color);
+                    border-radius: 8px;
+                    padding: 0.75rem;
+                    transition: all 0.2s ease;
+                    cursor: pointer;
+                }
+                
+                .layout-columns .link-item:hover {
+                    background: var(--primary-light);
+                    transform: translateX(4px);
+                    border-color: var(--primary-color);
+                }
+                
+                .layout-columns .link-item a {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    text-decoration: none;
+                    color: var(--text-primary);
+                }
+                
+                .layout-columns .link-item .logo-img {
+                    width: 24px;
+                    height: 24px;
+                }
+                
+                .layout-columns .link-item .link-name {
+                    font-weight: 500;
+                    font-size: 0.9rem;
+                }
+            `;
+        } else if (layoutName === 'columns-vertical') {
+            style.textContent = `
+                .layout-columns-vertical {
+                    --primary-color: #8b5cf6;
+                    --primary-hover: #7c3aed;
+                    --primary-light: #a78bfa;
+                    --primary-dark: #6d28d9;
+                    --bg-primary: #faf5ff;
+                    --bg-secondary: #f3e8ff;
+                    --text-primary: #581c87;
+                    --text-secondary: #7c2d12;
+                    --border-color: #c4b5fd;
+                }
+                
+                .layout-columns-vertical.dark {
+                    --bg-primary: #1e1b4b;
+                    --bg-secondary: #312e81;
+                    --text-primary: #e0e7ff;
+                    --text-secondary: #c7d2fe;
+                    --border-color: #6366f1;
+                }
+                
+                .layout-columns-vertical #tab-content {
+                    display: flex !important;
+                    flex-direction: row !important;
+                    gap: 1rem !important;
+                    flex-wrap: wrap !important;
+                    align-items: flex-start !important;
+                    width: 100% !important;
+                    overflow-y: auto !important;
+                    max-width: none !important;
+                    height: calc(100vh - 200px) !important;
+                }
+                
+                .layout-columns-vertical .max-w-7xl {
+                    max-width: none !important;
+                }
+                
+                .layout-columns-vertical .category-column {
+                    flex: 0 0 auto;
+                    width: 300px;
+                    background: var(--bg-secondary);
+                    border-radius: 12px;
+                    padding: 1rem;
+                    border: 1px solid var(--border-color);
+                }
+                
+                .layout-columns-vertical .category-title {
+                    color: var(--text-primary);
+                    font-size: 1.25rem;
+                    font-weight: 600;
+                    margin-bottom: 1rem;
+                    padding-bottom: 0.5rem;
+                    border-bottom: 2px solid var(--primary-color);
+                }
+                
+                .layout-columns-vertical .links-list {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 0.75rem;
+                }
+                
+                .layout-columns-vertical .link-item {
+                    background: var(--bg-primary);
+                    border: 1px solid var(--border-color);
+                    border-radius: 8px;
+                    padding: 0.75rem;
+                    transition: all 0.2s ease;
+                    cursor: pointer;
+                }
+                
+                .layout-columns-vertical .link-item:hover {
+                    background: var(--primary-light);
+                    transform: translateX(4px);
+                    border-color: var(--primary-color);
+                }
+                
+                .layout-columns-vertical .link-item a {
+                    display: flex;
+                    align-items: center;
+                    gap: 0.75rem;
+                    text-decoration: none;
+                    color: var(--text-primary);
+                }
+                
+                .layout-columns-vertical .link-item .logo-img {
+                    width: 24px;
+                    height: 24px;
+                }
+                
+                .layout-columns-vertical .link-item .link-name {
+                    font-weight: 500;
+                    font-size: 0.9rem;
+                }
+            `;
+        } else if (layoutName === 'creative') {
+            style.textContent = `
+                .layout-creative {
+                    --primary-color: #059669;
+                    --primary-hover: #047857;
+                    --primary-light: #10b981;
+                    --primary-dark: #065f46;
+                    --accent-color: #0d9488;
+                    --bg-primary: #ecfdf5;
+                    --bg-secondary: #d1fae5;
+                    --text-primary: #064e3b;
+                    --text-secondary: #065f46;
+                    --border-color: #6ee7b7;
+                }
+                
+                .layout-creative.dark {
+                    --bg-primary: #064e3b;
+                    --bg-secondary: #065f46;
+                    --text-primary: #a7f3d0;
+                    --text-secondary: #6ee7b7;
+                    --border-color: #10b981;
+                }
+                
+                .layout-creative .tab-content {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+                    gap: 2rem;
+                }
+                
+                .layout-creative .category-section {
+                    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-primary));
+                    border-radius: 16px;
+                    padding: 2rem;
+                    border: 2px solid var(--border-color);
+                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+                    position: relative;
+                    overflow: hidden;
+                }
+                
+                .layout-creative .category-section::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    height: 4px;
+                    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
+                }
+                
+                .layout-creative .category-title {
+                    color: var(--text-primary);
+                    font-size: 1.5rem;
+                    font-weight: 700;
+                    margin-bottom: 1.5rem;
+                    text-align: center;
+                    position: relative;
+                }
+                
+                .layout-creative .links-grid {
+                    display: grid;
+                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+                    gap: 1rem;
+                }
+                
+                .layout-creative .link-card {
+                    background: var(--bg-primary);
+                    border: 1px solid var(--border-color);
+                    border-radius: 12px;
+                    padding: 1.25rem;
+                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                    cursor: pointer;
+                    position: relative;
+                    overflow: hidden;
+                }
+                
+                .layout-creative .link-card::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: -100%;
+                    width: 100%;
+                    height: 100%;
+                    background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.1), transparent);
+                    transition: left 0.5s ease;
+                }
+                
+                .layout-creative .link-card:hover::before {
+                    left: 100%;
+                }
+                
+                .layout-creative .link-card:hover {
+                    transform: translateY(-4px) scale(1.02);
+                    box-shadow: 0 12px 24px rgba(16, 185, 129, 0.2);
+                    border-color: var(--primary-color);
+                }
+                
+                .layout-creative .link-card a {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    text-align: center;
+                    text-decoration: none;
+                    color: var(--text-primary);
+                    gap: 0.75rem;
+                }
+                
+                .layout-creative .link-card .logo-img {
+                    width: 40px;
+                    height: 40px;
+                    border-radius: 8px;
+                    background: var(--bg-secondary);
+                    padding: 8px;
+                }
+                
+                .layout-creative .link-card .link-name {
+                    font-weight: 600;
+                    font-size: 0.95rem;
+                    line-height: 1.2;
+                }
+                
+                .layout-creative .link-card .link-url {
+                    font-size: 0.75rem;
+                    color: var(--text-secondary);
+                    opacity: 0.8;
+                }
+            `;
+        }
+        
+        document.head.appendChild(style);
     }
 
     setupRefreshButton() {
@@ -140,8 +506,34 @@ class LinkHomepage {
         const activeTabData = this.data.tabs[this.activeTab];
         this.tabContent.innerHTML = '';
 
+        if (this.currentLayout === 'columns') {
+            this.renderColumnsLayout(activeTabData);
+        } else if (this.currentLayout === 'columns-vertical') {
+            this.renderColumnsLayout(activeTabData);
+        } else if (this.currentLayout === 'creative') {
+            this.renderCreativeLayout(activeTabData);
+        } else {
+            this.renderDefaultLayout(activeTabData);
+        }
+    }
+
+    renderDefaultLayout(activeTabData) {
         activeTabData.categories.forEach(category => {
             const categorySection = this.createCategorySection(category);
+            this.tabContent.appendChild(categorySection);
+        });
+    }
+
+    renderColumnsLayout(activeTabData) {
+        activeTabData.categories.forEach(category => {
+            const categoryColumn = this.createCategoryColumn(category);
+            this.tabContent.appendChild(categoryColumn);
+        });
+    }
+
+    renderCreativeLayout(activeTabData) {
+        activeTabData.categories.forEach(category => {
+            const categorySection = this.createCreativeCategorySection(category);
             this.tabContent.appendChild(categorySection);
         });
     }
@@ -164,6 +556,50 @@ class LinkHomepage {
 
         section.appendChild(title);
         section.appendChild(grid);
+
+        return section;
+    }
+
+    createCategoryColumn(category) {
+        const column = document.createElement('div');
+        column.className = 'category-column animate-fade-in';
+
+        const title = document.createElement('h2');
+        title.className = 'category-title';
+        title.textContent = category.category;
+
+        const linksList = document.createElement('div');
+        linksList.className = 'links-list';
+
+        category.links.forEach(link => {
+            const linkItem = this.createColumnLinkItem(link);
+            linksList.appendChild(linkItem);
+        });
+
+        column.appendChild(title);
+        column.appendChild(linksList);
+
+        return column;
+    }
+
+    createCreativeCategorySection(category) {
+        const section = document.createElement('div');
+        section.className = 'category-section animate-fade-in';
+
+        const title = document.createElement('h2');
+        title.className = 'category-title';
+        title.textContent = category.category;
+
+        const linksGrid = document.createElement('div');
+        linksGrid.className = 'links-grid';
+
+        category.links.forEach(link => {
+            const linkCard = this.createCreativeLinkCard(link);
+            linksGrid.appendChild(linkCard);
+        });
+
+        section.appendChild(title);
+        section.appendChild(linksGrid);
 
         return section;
     }
@@ -210,6 +646,87 @@ class LinkHomepage {
 
         card.appendChild(logoContainer);
         card.appendChild(content);
+
+        return card;
+    }
+
+    createColumnLinkItem(link) {
+        const item = document.createElement('div');
+        item.className = 'link-item';
+
+        const linkElement = document.createElement('a');
+        linkElement.href = link.url;
+        linkElement.target = '_blank';
+        linkElement.rel = 'noopener noreferrer';
+
+        // Logo
+        const logoContainer = document.createElement('div');
+        logoContainer.className = 'flex-shrink-0';
+
+        if (link.logoPath) {
+            const logo = document.createElement('img');
+            logo.src = link.logoPath;
+            logo.alt = `${link.name} logo`;
+            logo.className = 'logo-img';
+            logo.onerror = () => {
+                logoContainer.innerHTML = this.createFallbackIcon(link.iconHint || 'link');
+            };
+            logoContainer.appendChild(logo);
+        } else {
+            logoContainer.innerHTML = this.createFallbackIcon(link.iconHint || 'link');
+        }
+
+        // Name only (no URL)
+        const name = document.createElement('span');
+        name.className = 'link-name';
+        name.textContent = link.name;
+
+        linkElement.appendChild(logoContainer);
+        linkElement.appendChild(name);
+        item.appendChild(linkElement);
+
+        return item;
+    }
+
+    createCreativeLinkCard(link) {
+        const card = document.createElement('div');
+        card.className = 'link-card';
+
+        const linkElement = document.createElement('a');
+        linkElement.href = link.url;
+        linkElement.target = '_blank';
+        linkElement.rel = 'noopener noreferrer';
+
+        // Logo
+        const logoContainer = document.createElement('div');
+        logoContainer.className = 'flex-shrink-0';
+
+        if (link.logoPath) {
+            const logo = document.createElement('img');
+            logo.src = link.logoPath;
+            logo.alt = `${link.name} logo`;
+            logo.className = 'logo-img';
+            logo.onerror = () => {
+                logoContainer.innerHTML = this.createFallbackIcon(link.iconHint || 'link');
+            };
+            logoContainer.appendChild(logo);
+        } else {
+            logoContainer.innerHTML = this.createFallbackIcon(link.iconHint || 'link');
+        }
+
+        // Content
+        const name = document.createElement('div');
+        name.className = 'link-name';
+        name.textContent = link.name;
+
+        const url = document.createElement('div');
+        url.className = 'link-url';
+        url.textContent = this.extractDomain(link.url);
+
+        linkElement.appendChild(logoContainer);
+        linkElement.appendChild(name);
+        linkElement.appendChild(url);
+        card.appendChild(linkElement);
 
         return card;
     }
