@@ -3,6 +3,7 @@ class LinkHomepage {
         this.data = null;
         this.activeTab = null;
         this.currentLayout = 'default';
+        this.logoPollingInterval = null;
         this.themeToggle = document.getElementById('theme-toggle');
         this.refreshBtn = document.getElementById('refresh-btn');
         this.retryBtn = document.getElementById('retry-btn');
@@ -433,6 +434,12 @@ class LinkHomepage {
             this.renderTabs();
             this.showContent();
             
+            // If logos are still loading, show a message and poll for updates
+            if (result.loading) {
+                this.showLogoLoadingMessage();
+                this.startLogoPolling();
+            }
+            
         } catch (error) {
             console.error('Failed to load data:', error);
             this.showError(error.message);
@@ -444,10 +451,7 @@ class LinkHomepage {
             this.showLoading();
             
             const response = await fetch('/api/refresh', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                }
+                method: 'POST'
             });
             
             if (!response.ok) {
@@ -463,6 +467,60 @@ class LinkHomepage {
         } catch (error) {
             console.error('Failed to refresh data:', error);
             this.showError(error.message);
+        }
+    }
+
+    showLogoLoadingMessage() {
+        // Create a loading message banner
+        const loadingBanner = document.createElement('div');
+        loadingBanner.id = 'logo-loading-banner';
+        loadingBanner.className = 'bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-md mb-4 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-200';
+        loadingBanner.innerHTML = `
+            <div class="flex items-center">
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
+                <span>Logos are being processed in the background. The page will update automatically when ready.</span>
+            </div>
+        `;
+        
+        // Insert the banner at the top of the content
+        const content = document.getElementById('content');
+        if (content && content.firstChild) {
+            content.insertBefore(loadingBanner, content.firstChild);
+        }
+    }
+
+    startLogoPolling() {
+        // Poll every 2 seconds to check if logos are ready
+        this.logoPollingInterval = setInterval(async () => {
+            try {
+                const response = await fetch('/api/links');
+                if (response.ok) {
+                    const result = await response.json();
+                    
+                    // If loading is no longer true, logos are ready
+                    if (!result.loading) {
+                        this.stopLogoPolling();
+                        this.data = result;
+                        this.renderTabs();
+                        this.showContent();
+                        
+                        // Remove the loading banner
+                        const loadingBanner = document.getElementById('logo-loading-banner');
+                        if (loadingBanner) {
+                            loadingBanner.remove();
+                        }
+                    }
+                }
+            } catch (error) {
+                console.warn('Logo polling error:', error);
+            }
+        }, 2000);
+    }
+
+    stopLogoPolling() {
+        if (this.logoPollingInterval) {
+            clearInterval(this.logoPollingInterval);
+            this.logoPollingInterval = null;
         }
     }
 

@@ -65,14 +65,31 @@ async function registerApiRoutes(fastify, options) {
     }
   }, async (request, reply) => {
     try {
-      const data = dataService.getCachedData();
+      // Try to get enriched data first (with logos)
+      let data = dataService.getCachedData();
       
       if (!data) {
-        reply.code(503).send({
-          error: 'Service Unavailable',
-          message: 'Data not loaded yet'
-        });
-        return;
+        // If no enriched data available, try to get raw data and return it immediately
+        // This allows the frontend to load while logos are being processed in the background
+        try {
+          const rawData = await dataService.loadRawData();
+          const sourceInfo = dataService.getDataSourceInfo();
+          
+          reply.send({
+            ...rawData,
+            source: sourceInfo.source,
+            lastUpdated: new Date().toISOString(),
+            loading: true,
+            message: 'Data loaded, logos are being processed in the background'
+          });
+          return;
+        } catch (rawDataError) {
+          reply.code(503).send({
+            error: 'Service Unavailable',
+            message: 'Data not loaded yet'
+          });
+          return;
+        }
       }
 
       const sourceInfo = dataService.getDataSourceInfo();
