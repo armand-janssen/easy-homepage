@@ -1,0 +1,29 @@
+services:
+  easy-homepage:
+    build: .
+    container_name: easy-homepage
+    ports:
+      - "9999:9999"
+    environment:
+      - NODE_ENV=production
+      - PORT=9999
+      - HOST=0.0.0.0
+    env_file:
+      - .env
+    volumes:
+      # Optional: Mount logos directory for persistence
+      - ./logos:/app/logos
+      # Optional: Mount data directory if using local JSON
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:9999/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+# Optional: Add volumes for persistent data
+volumes:
+  logos_data:
+  app_data:

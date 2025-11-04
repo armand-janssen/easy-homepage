@@ -1,0 +1,6 @@
+tmp-sites.json
+logos/
+node_modules/
+.git/
+*.log
+.DS_Store

@@ -1,0 +1,49 @@
+{
+    "tabs": [
+        {
+            "tab": "Home",
+            "categories": [
+                {
+                    "category": "Links",
+                    "links": [
+                        {
+                            "name": "GitHub",
+                            "url": "https:/github.com",
+                            "icon-hint": "github"
+                        }
+                    ]
+                },
+                {
+                    "category": "Tools",
+                    "links": [
+                        {
+                            "name": "Visual Studio Code",
+                            "url": "https:/code.visualstudio.com",
+                            "icon-hint": "vscode"
+                        },
+                        {
+                            "name": "Docker",
+                            "url": "https:/docker.com",
+                            "icon-hint": "docker"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
+            "tab": "Hobby",
+            "categories": [
+                {
+                    "category": "Radio Control",
+                    "links": [
+                        {
+                            "name": "Hobbyking",
+                            "url": "https:/hobbyking.com",
+                            "icon-hint": "hobbyking"
+                        }
+                    ]
+                }
+            ]
+        }
+    ]
+}

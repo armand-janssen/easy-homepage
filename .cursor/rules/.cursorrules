@@ -1,0 +1,170 @@
+# Cursor Rules for Easy Homepage Project
+
+- You are my favorite developer and you write very good and quality code.
+
+## Tech Stack Requirements
+- **Backend**: Node.js with Fastify framework
+- **Frontend**: Tailwind CSS for all styling
+- **Package Manager**: pnpm (preferred over npm/yarn)
+- **Development Environment**: mise for tool version management
+
+## Code Organization Principles
+- Split code into logical, focused files to maintain readability
+- Use clear separation of concerns
+- Keep files small and focused on single responsibilities
+- Organize code by feature/domain rather than by technical layer
+
+## File Structure Guidelines
+
+### Backend (Node.js + Fastify)
+```
+src/
+├── routes/           # API route handlers
+│   ├── auth.js
+│   ├── users.js
+│   └── sites.js
+├── services/         # Business logic
+│   ├── authService.js
+│   ├── userService.js
+│   └── siteService.js
+├── models/           # Data models/schemas
+│   ├── User.js
+│   └── Site.js
+├── middleware/       # Custom middleware
+│   ├── auth.js
+│   ├── validation.js
+│   └── errorHandler.js
+├── utils/            # Utility functions
+│   ├── database.js
+│   ├── validation.js
+│   └── helpers.js
+├── config/           # Configuration files
+│   ├── database.js
+│   └── app.js
+└── app.js            # Main application entry point
+```
+
+### Frontend (HTML + Tailwind CSS)
+```
+public/
+├── css/              # Custom CSS (minimal, prefer Tailwind)
+│   └── custom.css
+├── js/               # Client-side JavaScript
+│   ├── components/
+│   ├── utils/
+│   └── main.js
+└── views/            # HTML templates
+    ├── layouts/
+    ├── partials/
+    └── pages/
+```
+
+## Coding Standards
+
+### Node.js + Fastify
+- Use ES6+ features (async/await, destructuring, arrow functions)
+- Implement proper error handling with try-catch blocks
+- Use Fastify's built-in validation and serialization
+- Follow RESTful API conventions
+- Use environment variables for configuration
+- Implement proper logging with appropriate log levels
+
+### Tailwind CSS
+- Use Tailwind utility classes for all styling
+- Avoid custom CSS unless absolutely necessary
+- Use Tailwind's responsive prefixes (sm:, md:, lg:, xl:)
+- Leverage Tailwind's color palette and spacing system
+- Use Tailwind's component classes for complex UI patterns
+- Prefer Tailwind's built-in animations and transitions
+- **MANDATORY**: Implement dark mode toggle button in frontend
+- Use Tailwind's dark mode classes (dark:) for theme switching
+- Store theme preference in localStorage
+- Provide smooth transitions between light and dark modes
+
+### Code Splitting Rules
+1. **Routes**: One file per resource/domain (auth, users, sites)
+2. **Services**: One file per business domain with clear interfaces
+3. **Models**: One file per data model with validation schemas
+4. **Middleware**: One file per middleware concern
+5. **Utils**: Group related utility functions in focused files
+6. **Components**: Split UI components into separate files when they exceed 50 lines
+
+## File Naming Conventions
+- Use camelCase for JavaScript files
+- Use kebab-case for HTML/CSS files
+- Use descriptive names that indicate purpose
+- Include file type in directory structure (services/, models/, etc.)
+
+## Dependencies Management
+- Use pnpm for package management
+- Keep dependencies minimal and focused
+- Prefer Fastify plugins over custom implementations
+- Use Tailwind CSS via CDN or build process
+- Document any non-standard dependencies
+
+## Development Environment (mise)
+- **MANDATORY**: Use mise for tool version management
+- Create `.mise.toml` file to specify tool versions
+- Use mise to manage Node.js, pnpm, and other development tools
+- Ensure consistent development environment across team members
+- Document required tool versions in mise configuration
+- Use mise plugins for additional tools (Docker, databases, etc.)
+- Run `mise install` to set up development environment
+- Use `mise exec` for running commands with correct tool versions
+
+## Error Handling
+- Implement consistent error handling patterns
+- Use Fastify's error handling mechanisms
+- Provide meaningful error messages
+- Log errors appropriately
+- Handle both client and server-side errors gracefully
+
+## Performance Guidelines
+- Use Fastify's built-in performance optimizations
+- Implement proper caching strategies
+- Optimize Tailwind CSS builds
+- Use appropriate HTTP status codes
+- Implement proper request validation
+
+## Security Considerations
+- Use Fastify's security plugins
+- Implement proper authentication/authorization
+- Validate all inputs
+- Use HTTPS in production
+- Sanitize user inputs
+- Implement rate limiting
+
+## Testing Approach
+- Write unit tests for services and utilities
+- Test API endpoints with proper status codes
+- Test error scenarios
+- Use appropriate testing frameworks for Node.js
+- Test Tailwind CSS responsive behavior
+
+## Documentation Requirements
+- **MANDATORY**: Create comprehensive README.md with clear examples
+- Document what the application does with practical examples
+- Include step-by-step local development setup instructions with mise
+- Provide Docker setup and usage instructions with examples
+- Document API endpoints with clear descriptions and examples
+- Include examples for complex Tailwind CSS patterns
+- Document any custom configurations
+- Document environment variables and their purposes
+- Include screenshots or GIFs showing dark/light mode functionality
+- Provide troubleshooting section for common issues
+- Document mise configuration and usage examples
+
+## Code Review Checklist
+- [ ] Code is split into logical, focused files
+- [ ] Tailwind CSS is used for all styling
+- [ ] Dark mode toggle button is implemented and functional
+- [ ] Fastify best practices are followed
+- [ ] Error handling is implemented
+- [ ] Code is readable and well-organized
+- [ ] Dependencies are minimal and necessary
+- [ ] Security considerations are addressed
+- [ ] Performance optimizations are in place
+- [ ] README.md is comprehensive with examples
+- [ ] Docker setup is documented and working
+- [ ] mise configuration is properly set up
+- [ ] Development environment is reproducible with mise
