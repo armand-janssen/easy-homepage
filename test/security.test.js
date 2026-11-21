@@ -86,6 +86,8 @@ test('cross-site refresh is refused', async () => {
     const res = await app.inject({ method: 'POST', url: '/api/refresh', headers });
     assert.strictEqual(res.statusCode, 403);
   }
+  const proxied = await app.inject({ method: 'POST', url: '/api/refresh', headers: { origin: 'https://home.example', host: '127.0.0.1:9999', 'sec-fetch-site': 'same-origin' } });
+  assert.strictEqual(proxied.statusCode, 200);
   const same = await app.inject({ method: 'POST', url: '/api/refresh', headers: { origin: 'http://192.168.1.5:9999', host: '192.168.1.5:9999' } });
   assert.strictEqual(same.statusCode, 200);
 });

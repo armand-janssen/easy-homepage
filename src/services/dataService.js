@@ -32,6 +32,15 @@ class DataService {
     this.rawLoad = null;
   }
 
+  // Cache file content is validated like any other source; anything unusable counts as no cache
+  async readCache(ignoreExpiry = false) {
+    try {
+      return validateData(await this.cacheManager.getCachedData(ignoreExpiry));
+    } catch (error) {
+      return null;
+    }
+  }
+
   /**
    * Load JSON data from local file
    * @param {string} filePath - Path to JSON file
@@ -102,8 +111,9 @@ class DataService {
         await this.cacheManager.setCachedData(data);
         return data;
       } catch (error) {
+        if (this.cachedData) throw error; // already serving data: report the failure instead of masking it
         console.warn('GitHub load failed, trying cache...');
-        const cachedData = await this.cacheManager.getCachedData(true); // stale beats nothing
+        const cachedData = await this.readCache(true); // stale beats nothing
         if (cachedData) {
           console.log('Using cached data as fallback');
           return cachedData;
@@ -163,7 +173,7 @@ class DataService {
       } else {
         // Try cache first for GitHub sources
         if (this.config.githubUrl) {
-          const cachedData = await this.cacheManager.getCachedData();
+          const cachedData = await this.readCache();
           if (cachedData) {
             console.log('Using cached data');
             rawData = cachedData;
@@ -180,16 +190,18 @@ class DataService {
       // Enrich with logos
       const enrichedData = await this.logoService.enrichWithLogos(rawData);
       
-      // Cache the enriched data
-      await this.cacheManager.setCachedData(enrichedData);
-      
       this.cachedData = enrichedData;
+
+      // Cache the enriched data (best effort: an unwritable cache must not block fresh data)
+      await this.cacheManager.setCachedData(enrichedData).catch(() => {});
+
       return enrichedData;
     } catch (error) {
       console.error('Failed to load data:', error.message);
+      if (forceRefresh && this.cachedData) throw error; // keep serving current data, report the failed refresh
       
       // Try to return cached data as fallback
-      const cachedData = await this.cacheManager.getCachedData(true); // stale beats nothing
+      const cachedData = await this.readCache(true); // stale beats nothing
       if (cachedData) {
         console.log('Using cached data as fallback');
         this.cachedData = cachedData;

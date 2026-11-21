@@ -10,13 +10,14 @@ async function registerApiRoutes(fastify, options) {
   const dataService = new DataService(config);
 
   // Initialize data service on startup (async, non-blocking)
-  dataService.loadData()
+  let enrichInFlight = dataService.loadData()
     .then(() => {
       fastify.log.info('Data service initialized successfully');
     })
     .catch((error) => {
       fastify.log.error(error, 'Failed to initialize data service');
-    });
+    })
+    .finally(() => { enrichInFlight = null; });
 
   // GET /api/links - Returns enriched JSON with logo paths
   fastify.get('/api/links', {
@@ -76,6 +77,8 @@ async function registerApiRoutes(fastify, options) {
         // This allows the frontend to load while logos are being processed in the background
         try {
           const rawData = dataService.rawData || await dataService.loadRawData();
+          // The startup load failed earlier: retry enrichment in the background so "loading" can end
+          enrichInFlight ??= dataService.loadData().catch(() => {}).finally(() => { enrichInFlight = null; });
           const sourceInfo = dataService.getDataSourceInfo();
           
           reply.send({
@@ -150,11 +153,14 @@ async function registerApiRoutes(fastify, options) {
     }
   }, async (request, reply) => {
     // Browsers label cross-site requests: refuse them so other websites can't trigger refreshes (CSRF)
-    // Sec-Fetch-Site is only sent to https/localhost, so also compare Origin with Host (plain-http LAN)
+    // Sec-Fetch-Site is only sent to https/localhost; without it (plain-http LAN) compare Origin with Host.
+    // X-Forwarded-Host covers proxies that rewrite Host; a cross-site page cannot set it without a CORS preflight.
     const fetchSite = request.headers['sec-fetch-site'];
     const origin = request.headers.origin;
-    const crossOrigin = origin && URL.parse(origin)?.host !== request.headers.host;
-    if (crossOrigin || (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none')) {
+    const crossSite = fetchSite
+      ? !['same-origin', 'none'].includes(fetchSite)
+      : origin && ![request.headers.host, request.headers['x-forwarded-host']].includes(URL.parse(origin)?.host);
+    if (crossSite) {
       return reply.code(403).send({ error: 'Forbidden', message: 'Cross-site requests are not allowed' });
     }
 
