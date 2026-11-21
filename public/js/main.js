@@ -471,6 +471,7 @@ class LinkHomepage {
     }
 
     showLogoLoadingMessage() {
+        if (document.getElementById('logo-loading-banner')) return;
         // Create a loading message banner
         const loadingBanner = document.createElement('div');
         loadingBanner.id = 'logo-loading-banner';
@@ -483,7 +484,7 @@ class LinkHomepage {
         `;
         
         // Insert the banner at the top of the content
-        const content = document.getElementById('content');
+        const content = document.getElementById('content-area');
         if (content && content.firstChild) {
             content.insertBefore(loadingBanner, content.firstChild);
         }
@@ -491,6 +492,7 @@ class LinkHomepage {
 
     startLogoPolling() {
         // Poll every 2 seconds to check if logos are ready
+        this.stopLogoPolling();
         this.logoPollingInterval = setInterval(async () => {
             try {
                 const response = await fetch('/api/links');
@@ -501,7 +503,9 @@ class LinkHomepage {
                     if (!result.loading) {
                         this.stopLogoPolling();
                         this.data = result;
+                        const tab = this.activeTab;
                         this.renderTabs();
+                        if (tab > 0 && tab < result.tabs.length) this.switchTab(tab); // keep the user's tab
                         this.showContent();
                         
                         // Remove the loading banner
@@ -664,7 +668,7 @@ class LinkHomepage {
 
     createLinkCard(link) {
         const card = document.createElement('a');
-        card.href = link.url;
+        card.href = this.safeUrl(link.url);
         card.target = '_blank';
         card.rel = 'noopener noreferrer';
         card.className = 'link-card bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg p-4 flex items-center space-x-3 border border-gray-200 dark:border-gray-700 animate-slide-up';
@@ -673,18 +677,18 @@ class LinkHomepage {
         const logoContainer = document.createElement('div');
         logoContainer.className = 'flex-shrink-0';
 
-        if (link.logoPath) {
+        if (String(link.logoPath).startsWith('/logos/')) { // only server-generated paths
             const logo = document.createElement('img');
             logo.src = link.logoPath;
             logo.alt = `${link.name} logo`;
             logo.className = 'logo-img';
             logo.onerror = () => {
                 // Fallback to icon hint or default icon
-                logoContainer.innerHTML = this.createFallbackIcon(link.iconHint || 'link');
+                logoContainer.innerHTML = this.createFallbackIcon(link['icon-hint'] || link.iconHint);
             };
             logoContainer.appendChild(logo);
         } else {
-            logoContainer.innerHTML = this.createFallbackIcon(link.iconHint || 'link');
+            logoContainer.innerHTML = this.createFallbackIcon(link['icon-hint'] || link.iconHint);
         }
 
         // Content
@@ -713,7 +717,7 @@ class LinkHomepage {
         item.className = 'link-item';
 
         const linkElement = document.createElement('a');
-        linkElement.href = link.url;
+        linkElement.href = this.safeUrl(link.url);
         linkElement.target = '_blank';
         linkElement.rel = 'noopener noreferrer';
 
@@ -721,17 +725,17 @@ class LinkHomepage {
         const logoContainer = document.createElement('div');
         logoContainer.className = 'flex-shrink-0';
 
-        if (link.logoPath) {
+        if (String(link.logoPath).startsWith('/logos/')) { // only server-generated paths
             const logo = document.createElement('img');
             logo.src = link.logoPath;
             logo.alt = `${link.name} logo`;
             logo.className = 'logo-img';
             logo.onerror = () => {
-                logoContainer.innerHTML = this.createFallbackIcon(link.iconHint || 'link');
+                logoContainer.innerHTML = this.createFallbackIcon(link['icon-hint'] || link.iconHint);
             };
             logoContainer.appendChild(logo);
         } else {
-            logoContainer.innerHTML = this.createFallbackIcon(link.iconHint || 'link');
+            logoContainer.innerHTML = this.createFallbackIcon(link['icon-hint'] || link.iconHint);
         }
 
         // Name only (no URL)
@@ -751,7 +755,7 @@ class LinkHomepage {
         card.className = 'link-card';
 
         const linkElement = document.createElement('a');
-        linkElement.href = link.url;
+        linkElement.href = this.safeUrl(link.url);
         linkElement.target = '_blank';
         linkElement.rel = 'noopener noreferrer';
 
@@ -759,17 +763,17 @@ class LinkHomepage {
         const logoContainer = document.createElement('div');
         logoContainer.className = 'flex-shrink-0';
 
-        if (link.logoPath) {
+        if (String(link.logoPath).startsWith('/logos/')) { // only server-generated paths
             const logo = document.createElement('img');
             logo.src = link.logoPath;
             logo.alt = `${link.name} logo`;
             logo.className = 'logo-img';
             logo.onerror = () => {
-                logoContainer.innerHTML = this.createFallbackIcon(link.iconHint || 'link');
+                logoContainer.innerHTML = this.createFallbackIcon(link['icon-hint'] || link.iconHint);
             };
             logoContainer.appendChild(logo);
         } else {
-            logoContainer.innerHTML = this.createFallbackIcon(link.iconHint || 'link');
+            logoContainer.innerHTML = this.createFallbackIcon(link['icon-hint'] || link.iconHint);
         }
 
         // Content
@@ -798,7 +802,17 @@ class LinkHomepage {
             default: '<svg class="logo-img text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"></path></svg>'
         };
 
-        return iconMap[iconHint] || iconMap.default;
+        return Object.hasOwn(iconMap, iconHint) ? iconMap[iconHint] : iconMap.default;
+    }
+
+    // Only http(s) links are clickable: blocks javascript:/data: URLs from the data source
+    safeUrl(url) {
+        try {
+            const parsed = new URL(url);
+            return ['http:', 'https:'].includes(parsed.protocol) ? parsed.href : '#';
+        } catch (error) {
+            return '#';
+        }
     }
 
     extractDomain(url) {

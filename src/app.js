@@ -22,22 +22,19 @@ async function buildApp() {
       prefix: '/'
     });
 
-    // Custom route to serve logos
-    fastify.get('/logos/*', async (request, reply) => {
-      const logoPath = request.params['*'];
-      const fullPath = path.join(__dirname, '../logos', logoPath);
-      
-      try {
-        await reply.sendFile(logoPath, path.join(__dirname, '../logos'));
-      } catch (error) {
-        reply.code(404).send({ error: 'Logo not found' });
-      }
+    // Baseline security headers on every response
+    fastify.addHook('onRequest', async (request, reply) => {
+      reply.header('X-Content-Type-Options', 'nosniff');
+      reply.header('Referrer-Policy', 'no-referrer');
     });
 
-    await fastify.register(require('@fastify/cors'), {
-      origin: true,
-      credentials: true
+    // Custom route to serve logos (sendFile confines the path to logosDir)
+    fastify.get('/logos/*', async (request, reply) => {
+      return reply.sendFile(request.params['*'], path.resolve(config.logosDir));
     });
+
+    // No CORS plugin: the frontend is same-origin, and reflecting arbitrary
+    // origins would let any website read the link list from a visitor's browser.
 
     // Register API routes
     await fastify.register(registerApiRoutes, { prefix: '', config });
@@ -61,10 +58,10 @@ async function buildApp() {
 
     // 404 handler for SPA
     fastify.setNotFoundHandler((request, reply) => {
-      if (request.url.startsWith('/api/')) {
+      if (request.url.startsWith('/api/') || request.url.startsWith('/logos/')) {
         reply.status(404).send({
           error: 'Not Found',
-          message: `API endpoint ${request.url} not found`
+          message: `${request.url} not found`
         });
       } else {
         // Serve index.html for all non-API routes (SPA)
@@ -74,7 +71,7 @@ async function buildApp() {
 
     return fastify;
   } catch (error) {
-    fastify.log.error('Failed to build app:', error);
+    fastify.log.error(error, 'Failed to build app');
     throw error;
   }
 }

@@ -10,13 +10,14 @@ async function registerApiRoutes(fastify, options) {
   const dataService = new DataService(config);
 
   // Initialize data service on startup (async, non-blocking)
-  dataService.loadData()
+  let enrichInFlight = dataService.loadData()
     .then(() => {
       fastify.log.info('Data service initialized successfully');
     })
     .catch((error) => {
-      fastify.log.error('Failed to initialize data service:', error.message);
-    });
+      fastify.log.error(error, 'Failed to initialize data service');
+    })
+    .finally(() => { enrichInFlight = null; });
 
   // GET /api/links - Returns enriched JSON with logo paths
   fastify.get('/api/links', {
@@ -58,7 +59,10 @@ async function registerApiRoutes(fastify, options) {
               }
             },
             source: { type: 'string' },
-            lastUpdated: { type: 'string' }
+            appTitle: { type: 'string' },
+            lastUpdated: { type: 'string' },
+            loading: { type: 'boolean' },
+            message: { type: 'string' }
           }
         }
       }
@@ -72,12 +76,15 @@ async function registerApiRoutes(fastify, options) {
         // If no enriched data available, try to get raw data and return it immediately
         // This allows the frontend to load while logos are being processed in the background
         try {
-          const rawData = await dataService.loadRawData();
+          const rawData = dataService.rawData || await dataService.loadRawData();
+          // The startup load failed earlier: retry enrichment in the background so "loading" can end
+          enrichInFlight ??= dataService.loadData().catch(() => {}).finally(() => { enrichInFlight = null; });
           const sourceInfo = dataService.getDataSourceInfo();
           
           reply.send({
             ...rawData,
             source: sourceInfo.source,
+            appTitle: config.appTitle,
             lastUpdated: new Date().toISOString(),
             loading: true,
             message: 'Data loaded, logos are being processed in the background'
@@ -97,16 +104,23 @@ async function registerApiRoutes(fastify, options) {
       reply.send({
         ...data,
         source: sourceInfo.source,
+        appTitle: config.appTitle,
         lastUpdated: new Date().toISOString()
       });
     } catch (error) {
-      fastify.log.error('Error in /api/links:', error);
+      fastify.log.error(error, 'Error in /api/links');
       reply.code(500).send({
         error: 'Internal Server Error',
         message: 'Failed to retrieve links data'
       });
     }
   });
+
+  // Unauthenticated endpoint that spends upstream API quota: share one
+  // in-flight refresh and skip refreshes requested within the cooldown.
+  const REFRESH_COOLDOWN_MS = 30 * 1000;
+  let refreshInFlight = null;
+  let lastRefreshAt = 0;
 
   // POST /api/refresh - Triggers data refresh
   fastify.post('/api/refresh', {
@@ -118,7 +132,14 @@ async function registerApiRoutes(fastify, options) {
           properties: {
             success: { type: 'boolean' },
             message: { type: 'string' },
-            stats: { type: 'object' }
+            stats: {
+              type: 'object',
+              properties: {
+                totalLogos: { type: 'number' },
+                cacheAgeHours: { type: 'number', nullable: true },
+                lastUpdated: { type: 'string' }
+              }
+            }
           }
         },
         500: {
@@ -131,10 +152,31 @@ async function registerApiRoutes(fastify, options) {
       }
     }
   }, async (request, reply) => {
+    // Browsers label cross-site requests: refuse them so other websites can't trigger refreshes (CSRF)
+    // Sec-Fetch-Site is only sent to https/localhost; without it (plain-http LAN) compare Origin with Host.
+    // X-Forwarded-Host covers proxies that rewrite Host; a cross-site page cannot set it without a CORS preflight.
+    const fetchSite = request.headers['sec-fetch-site'];
+    const origin = request.headers.origin;
+    const crossSite = fetchSite
+      ? !['same-origin', 'none'].includes(fetchSite)
+      : origin && ![request.headers.host, request.headers['x-forwarded-host']].includes(URL.parse(origin)?.host);
+    if (crossSite) {
+      return reply.code(403).send({ error: 'Forbidden', message: 'Cross-site requests are not allowed' });
+    }
+
     try {
       fastify.log.info('Data refresh requested');
       
-      const refreshedData = await dataService.refreshData();
+      if (!refreshInFlight) {
+        if (Date.now() - lastRefreshAt < REFRESH_COOLDOWN_MS) {
+          return reply.send({ success: true, message: 'Data was refreshed recently, skipped' });
+        }
+        // Cooldown starts when a refresh succeeds, so a failed one can be retried right away
+        refreshInFlight = dataService.refreshData()
+          .then(() => { lastRefreshAt = Date.now(); })
+          .finally(() => { refreshInFlight = null; });
+      }
+      await refreshInFlight;
       const stats = await dataService.getCacheStats();
       
       fastify.log.info('Data refresh completed successfully');
@@ -149,11 +191,10 @@ async function registerApiRoutes(fastify, options) {
         }
       });
     } catch (error) {
-      fastify.log.error('Error in /api/refresh:', error);
+      fastify.log.error(error, 'Error in /api/refresh');
       reply.code(500).send({
         error: 'Internal Server Error',
-        message: 'Failed to refresh data',
-        details: error.message
+        message: 'Failed to refresh data'
       });
     }
   });
@@ -198,11 +239,10 @@ async function registerApiRoutes(fastify, options) {
         }
       });
     } catch (error) {
-      fastify.log.error('Error in /api/health:', error);
+      fastify.log.error(error, 'Error in /api/health');
       reply.code(500).send({
         status: 'error',
-        timestamp: new Date().toISOString(),
-        error: error.message
+        timestamp: new Date().toISOString()
       });
     }
   });
@@ -215,9 +255,12 @@ async function registerApiRoutes(fastify, options) {
         200: {
           type: 'object',
           properties: {
-            cache: { type: 'object' },
-            logos: { type: 'object' },
-            source: { type: 'object' }
+            cache: {
+              type: 'object',
+              properties: { ageHours: { type: 'number', nullable: true }, valid: { type: 'boolean' } }
+            },
+            logos: { type: 'object', properties: { total: { type: 'number' } } },
+            source: { type: 'object', properties: { source: { type: 'string' } } }
           }
         }
       }
@@ -230,18 +273,15 @@ async function registerApiRoutes(fastify, options) {
       reply.send({
         cache: {
           ageHours: cacheStats.cacheAgeHours,
-          valid: cacheStats.cacheValid,
-          file: cacheStats.cacheFile
+          valid: cacheStats.cacheValid
         },
         logos: {
-          total: cacheStats.totalLogos,
-          directory: cacheStats.logosDir,
-          files: cacheStats.files
+          total: cacheStats.totalLogos
         },
         source: sourceInfo
       });
     } catch (error) {
-      fastify.log.error('Error in /api/stats:', error);
+      fastify.log.error(error, 'Error in /api/stats');
       reply.code(500).send({
         error: 'Internal Server Error',
         message: 'Failed to retrieve statistics'

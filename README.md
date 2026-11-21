@@ -52,7 +52,7 @@ pnpm install
 ```
 
 **What mise does:**
-- Automatically installs Node.js 20.11.0 and pnpm 8.15.0
+- Automatically installs Node.js 24 and pnpm 8.15.0
 - Sets up consistent development environment
 - Manages tool versions across team members
 - Activates tools when entering project directory
@@ -241,6 +241,7 @@ docker run -p 3000:3000 \
   -e PORT=3000 \
   -e APP_TITLE="My Links" \
   -e LOCAL_JSON_PATH="./data/private.json" \
+  -v "$(pwd)/data:/app/data:ro" \
   easy-homepage
 ```
 
@@ -336,8 +337,11 @@ Returns enriched JSON data with logo paths for all links.
 }
 ```
 
+> **Security note:** the app has no authentication. Anyone who can reach the port can read your links and trigger refreshes, so keep it on a trusted network or put it behind an authenticating reverse proxy.
+
 #### POST /api/refresh
 Triggers a data refresh from the source and re-downloads logos.
+Concurrent calls share one refresh, and calls within 30 seconds of the last refresh are skipped.
 
 **Response:**
 ```json
@@ -377,20 +381,13 @@ Get cache and logo statistics.
 {
   "cache": {
     "ageHours": 0.5,
-    "valid": true,
-    "file": "./tmp-sites.json"
+    "valid": true
   },
   "logos": {
-    "total": 15,
-    "directory": "./logos",
-    "files": ["links_github.png", "tools_docker.png"]
+    "total": 15
   },
   "source": {
-    "source": "github",
-    "githubUrl": "https://raw.githubusercontent.com/...",
-    "localPath": null,
-    "cacheFile": "./tmp-sites.json",
-    "cacheValid": true
+    "source": "github"
   }
 }
 ```
