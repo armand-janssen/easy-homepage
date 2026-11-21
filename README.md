@@ -241,6 +241,7 @@ docker run -p 3000:3000 \
   -e PORT=3000 \
   -e APP_TITLE="My Links" \
   -e LOCAL_JSON_PATH="./data/private.json" \
+  -v "$(pwd)/data:/app/data:ro" \
   easy-homepage
 ```
 

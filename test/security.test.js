@@ -37,7 +37,7 @@ test('no CORS headers for foreign origins', async () => {
 test('security headers are set', async () => {
   const res = await app.inject({ url: '/api/health' });
   assert.strictEqual(res.headers['x-content-type-options'], 'nosniff');
-  assert.strictEqual(res.headers['x-frame-options'], 'DENY');
+  assert.strictEqual(res.headers['referrer-policy'], 'no-referrer');
 });
 
 test('/api/stats does not leak paths, URLs or file names', async () => {
@@ -69,6 +69,7 @@ test('/api/links returns validated data with icon hints', async () => {
 
 test('validateData rejects malformed upstream data', () => {
   assert.throws(() => validateData({}));
+  assert.throws(() => validateData({ tabs: [{ tab: 'x', categories: [{ category: 'c', links: [{ name: 'n', url: 'u', 'logo-hint': 5 }] }] }] }));
   assert.throws(() => validateData({ tabs: [{ tab: 'x', categories: [{ category: 'c', links: [{ name: 1, url: 'u' }] }] }] }));
   assert.ok(validateData({ tabs: [] }));
 });
@@ -81,6 +82,10 @@ test('logo image URLs are restricted to https logo.dev hosts', () => {
 });
 
 test('cross-site refresh is refused', async () => {
-  const res = await app.inject({ method: 'POST', url: '/api/refresh', headers: { 'sec-fetch-site': 'cross-site' } });
-  assert.strictEqual(res.statusCode, 403);
+  for (const headers of [{ 'sec-fetch-site': 'cross-site' }, { origin: 'http://evil.example', host: '192.168.1.5:9999' }]) {
+    const res = await app.inject({ method: 'POST', url: '/api/refresh', headers });
+    assert.strictEqual(res.statusCode, 403);
+  }
+  const same = await app.inject({ method: 'POST', url: '/api/refresh', headers: { origin: 'http://192.168.1.5:9999', host: '192.168.1.5:9999' } });
+  assert.strictEqual(same.statusCode, 200);
 });

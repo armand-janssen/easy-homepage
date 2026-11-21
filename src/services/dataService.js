@@ -14,7 +14,8 @@ function validateData(data) {
   const ok = data && Array.isArray(data.tabs) && data.tabs.every(tab =>
     tab && isStr(tab.tab) && Array.isArray(tab.categories) && tab.categories.every(cat =>
       cat && isStr(cat.category) && Array.isArray(cat.links) && cat.links.every(link =>
-        link && isStr(link.name) && isStr(link.url))));
+        link && isStr(link.name) && isStr(link.url) &&
+        ['logo-hint', 'icon-hint'].every(hint => link[hint] === undefined || isStr(link[hint])))));
   if (!ok) {
     throw new Error('Invalid links data: expected tabs[].categories[].links[] with string name and url');
   }
@@ -102,7 +103,7 @@ class DataService {
         return data;
       } catch (error) {
         console.warn('GitHub load failed, trying cache...');
-        const cachedData = await this.cacheManager.getCachedData();
+        const cachedData = await this.cacheManager.getCachedData(true); // stale beats nothing
         if (cachedData) {
           console.log('Using cached data as fallback');
           return cachedData;
@@ -188,11 +189,17 @@ class DataService {
       console.error('Failed to load data:', error.message);
       
       // Try to return cached data as fallback
-      const cachedData = await this.cacheManager.getCachedData();
+      const cachedData = await this.cacheManager.getCachedData(true); // stale beats nothing
       if (cachedData) {
         console.log('Using cached data as fallback');
         this.cachedData = cachedData;
         return cachedData;
+      }
+
+      // Enrichment failed but the links loaded: serve them without logos instead of "loading" forever
+      if (!this.cachedData && this.rawData) {
+        this.cachedData = this.rawData;
+        return this.rawData;
       }
       
       throw error;

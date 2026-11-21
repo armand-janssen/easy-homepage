@@ -471,6 +471,7 @@ class LinkHomepage {
     }
 
     showLogoLoadingMessage() {
+        if (document.getElementById('logo-loading-banner')) return;
         // Create a loading message banner
         const loadingBanner = document.createElement('div');
         loadingBanner.id = 'logo-loading-banner';
@@ -483,7 +484,7 @@ class LinkHomepage {
         `;
         
         // Insert the banner at the top of the content
-        const content = document.getElementById('content');
+        const content = document.getElementById('content-area');
         if (content && content.firstChild) {
             content.insertBefore(loadingBanner, content.firstChild);
         }
@@ -502,7 +503,9 @@ class LinkHomepage {
                     if (!result.loading) {
                         this.stopLogoPolling();
                         this.data = result;
+                        const tab = this.activeTab;
                         this.renderTabs();
+                        if (tab > 0 && tab < result.tabs.length) this.switchTab(tab); // keep the user's tab
                         this.showContent();
                         
                         // Remove the loading banner

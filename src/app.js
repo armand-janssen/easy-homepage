@@ -25,7 +25,6 @@ async function buildApp() {
     // Baseline security headers on every response
     fastify.addHook('onRequest', async (request, reply) => {
       reply.header('X-Content-Type-Options', 'nosniff');
-      reply.header('X-Frame-Options', 'DENY');
       reply.header('Referrer-Policy', 'no-referrer');
     });
 
@@ -59,10 +58,10 @@ async function buildApp() {
 
     // 404 handler for SPA
     fastify.setNotFoundHandler((request, reply) => {
-      if (request.url.startsWith('/api/')) {
+      if (request.url.startsWith('/api/') || request.url.startsWith('/logos/')) {
         reply.status(404).send({
           error: 'Not Found',
-          message: `API endpoint ${request.url} not found`
+          message: `${request.url} not found`
         });
       } else {
         // Serve index.html for all non-API routes (SPA)

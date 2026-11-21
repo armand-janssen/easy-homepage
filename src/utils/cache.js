@@ -28,9 +28,9 @@ class CacheManager {
    * Get cached data if it exists and is valid
    * @returns {Promise<Object|null>} cached data or null if not available
    */
-  async getCachedData() {
+  async getCachedData(ignoreExpiry = false) {
     try {
-      if (await this.isCacheValid()) {
+      if (ignoreExpiry || await this.isCacheValid()) {
         const data = await fs.readFile(this.cacheFile, 'utf8');
         return JSON.parse(data);
       }
@@ -69,22 +69,6 @@ class CacheManager {
       return cacheAge / (1000 * 60 * 60);
     } catch (error) {
       return Infinity;
-    }
-  }
-
-  /**
-   * Force cache invalidation by deleting the cache file
-   * @returns {Promise<void>}
-   */
-  async invalidateCache() {
-    try {
-      await fs.unlink(this.cacheFile);
-      console.log('Cache invalidated');
-    } catch (error) {
-      // File might not exist, which is fine
-      if (error.code !== 'ENOENT') {
-        console.error('Failed to invalidate cache:', error.message);
-      }
     }
   }
 }

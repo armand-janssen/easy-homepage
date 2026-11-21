@@ -129,7 +129,14 @@ async function registerApiRoutes(fastify, options) {
           properties: {
             success: { type: 'boolean' },
             message: { type: 'string' },
-            stats: { type: 'object' }
+            stats: {
+              type: 'object',
+              properties: {
+                totalLogos: { type: 'number' },
+                cacheAgeHours: { type: 'number', nullable: true },
+                lastUpdated: { type: 'string' }
+              }
+            }
           }
         },
         500: {
@@ -143,8 +150,11 @@ async function registerApiRoutes(fastify, options) {
     }
   }, async (request, reply) => {
     // Browsers label cross-site requests: refuse them so other websites can't trigger refreshes (CSRF)
+    // Sec-Fetch-Site is only sent to https/localhost, so also compare Origin with Host (plain-http LAN)
     const fetchSite = request.headers['sec-fetch-site'];
-    if (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none') {
+    const origin = request.headers.origin;
+    const crossOrigin = origin && URL.parse(origin)?.host !== request.headers.host;
+    if (crossOrigin || (fetchSite && fetchSite !== 'same-origin' && fetchSite !== 'none')) {
       return reply.code(403).send({ error: 'Forbidden', message: 'Cross-site requests are not allowed' });
     }
 
@@ -155,8 +165,10 @@ async function registerApiRoutes(fastify, options) {
         if (Date.now() - lastRefreshAt < REFRESH_COOLDOWN_MS) {
           return reply.send({ success: true, message: 'Data was refreshed recently, skipped' });
         }
-        lastRefreshAt = Date.now();
-        refreshInFlight = dataService.refreshData().finally(() => { refreshInFlight = null; });
+        // Cooldown starts when a refresh succeeds, so a failed one can be retried right away
+        refreshInFlight = dataService.refreshData()
+          .then(() => { lastRefreshAt = Date.now(); })
+          .finally(() => { refreshInFlight = null; });
       }
       await refreshInFlight;
       const stats = await dataService.getCacheStats();
