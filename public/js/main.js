@@ -431,6 +431,12 @@ class LinkHomepage {
                 document.title = result.appTitle;
             }
             
+            if (result.buildDate) {
+                const footer = document.getElementById('build-date');
+                footer.textContent = `Build: ${result.buildDate}`;
+                footer.classList.remove('hidden');
+            }
+
             this.renderTabs();
             this.showContent();
             
