@@ -14,8 +14,12 @@ services:
       # Optional: Mount logos directory for persistence
       - ./logos:/app/logos
       # Optional: Mount data directory if using local JSON
-      - ./data:/app/data
+      - ./data:/app/data:ro
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
     healthcheck:
       test: ["CMD", "node", "-e", "require('http').get('http://localhost:9999/api/health', (res) => { process.exit(res.statusCode === 200 ? 0 : 1) })"]
       interval: 30s
@@ -23,7 +27,3 @@ services:
       retries: 3
       start_period: 40s
 
-# Optional: Add volumes for persistent data
-volumes:
-  logos_data:
-  app_data:

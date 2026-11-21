@@ -3,7 +3,19 @@ const path = require('path');
 
 // Use native fetch (Node.js 18+) instead of node-fetch
 async function fetchWithNativeFetch(url, options = {}) {
-  return fetch(url, options);
+  return fetch(url, { signal: AbortSignal.timeout(10000), ...options });
+}
+
+const MAX_LOGO_BYTES = 2 * 1024 * 1024;
+
+// The image URL comes from the API response: only fetch https URLs on logo.dev (no SSRF)
+function isAllowedLogoUrl(url) {
+  try {
+    const { protocol, hostname } = new URL(url);
+    return protocol === 'https:' && (hostname === 'logo.dev' || hostname.endsWith('.logo.dev'));
+  } catch (error) {
+    return false;
+  }
 }
 
 class LogoService {
@@ -131,16 +143,27 @@ class LogoService {
         return false;
       }
 
+      if (!isAllowedLogoUrl(logoPngUrl)) {
+        console.warn(`Refusing logo_url outside https://*.logo.dev for ${searchTerm}: ${logoPngUrl}`);
+        return false;
+      }
+
       console.log(`Downloading logo image from: ${logoPngUrl}`);
       
       // Download the actual logo image
-      const imageResponse = await fetchWithNativeFetch(logoPngUrl);
+      const imageResponse = await fetchWithNativeFetch(logoPngUrl, { redirect: 'error' }); // a redirect would bypass the host check
       if (!imageResponse.ok) {
         console.warn(`Failed to download logo image for ${searchTerm}: ${imageResponse.status} ${imageResponse.statusText}`);
         return false;
       }
 
+      // shortcut: body is buffered before the size check (bounded by the 10s timeout), stream with a byte cap if logo hosts become untrusted
+      const isImage = (imageResponse.headers.get('content-type') || '').startsWith('image/');
       const buffer = Buffer.from(await imageResponse.arrayBuffer());
+      if (!isImage || buffer.length > MAX_LOGO_BYTES) {
+        console.warn(`Rejected logo for ${searchTerm}: not an image or larger than ${MAX_LOGO_BYTES} bytes`);
+        return false;
+      }
       const filepath = path.join(this.logosDir, filename);
       await fs.writeFile(filepath, buffer);
       
@@ -273,3 +296,4 @@ class LogoService {
 }
 
 module.exports = LogoService;
+module.exports.isAllowedLogoUrl = isAllowedLogoUrl;

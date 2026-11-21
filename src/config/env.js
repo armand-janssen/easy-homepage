@@ -1,4 +1,8 @@
 require('dotenv').config();
+const path = require('path');
+
+// Anchor writable paths to the project root, not the process cwd
+const root = path.join(__dirname, '../..');
 
 const config = {
   // Server configuration
@@ -21,8 +25,8 @@ const config = {
   isDevelopment: process.env.NODE_ENV === 'development',
   
   // Cache settings
-  cacheFile: './tmp-sites.json',
-  logosDir: './logos',
+  cacheFile: process.env.CACHE_FILE || path.join(root, 'tmp-sites.json'),
+  logosDir: process.env.LOGOS_DIR || path.join(root, 'logos'),
   
   // Logo.dev API settings
   logoDevBaseUrl: 'https://api.logo.dev/search',
