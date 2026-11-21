@@ -16,6 +16,9 @@ RUN pnpm install --frozen-lockfile --prod
 COPY src/ ./src/
 COPY public/ ./public/
 
+# Stamp the build date shown in the GUI
+RUN date -u +%Y-%m-%d > BUILD_DATE
+
 # Create logos directory
 RUN mkdir -p logos
 

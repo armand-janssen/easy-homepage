@@ -1,5 +1,6 @@
 require('dotenv').config();
 const path = require('path');
+const fs = require('fs');
 
 // Anchor writable paths to the project root, not the process cwd
 const root = path.join(__dirname, '../..');
@@ -12,6 +13,8 @@ const config = {
 
   // Application settings
   appTitle: process.env.APP_TITLE || 'My Links',
+  // Written by the Dockerfile; absent when running from source
+  buildDate: fs.existsSync(path.join(root, 'BUILD_DATE')) ? fs.readFileSync(path.join(root, 'BUILD_DATE'), 'utf8').trim() : '',
   cacheDurationHours: parseInt(process.env.CACHE_DURATION_HOURS) || 1,
 
   // Data source configuration

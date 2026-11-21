@@ -60,6 +60,7 @@ async function registerApiRoutes(fastify, options) {
             },
             source: { type: 'string' },
             appTitle: { type: 'string' },
+            buildDate: { type: 'string' },
             lastUpdated: { type: 'string' },
             loading: { type: 'boolean' },
             message: { type: 'string' }
@@ -85,6 +86,7 @@ async function registerApiRoutes(fastify, options) {
             ...rawData,
             source: sourceInfo.source,
             appTitle: config.appTitle,
+            buildDate: config.buildDate,
             lastUpdated: new Date().toISOString(),
             loading: true,
             message: 'Data loaded, logos are being processed in the background'
@@ -105,6 +107,7 @@ async function registerApiRoutes(fastify, options) {
         ...data,
         source: sourceInfo.source,
         appTitle: config.appTitle,
+        buildDate: config.buildDate,
         lastUpdated: new Date().toISOString()
       });
     } catch (error) {
