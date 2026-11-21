@@ -67,10 +67,13 @@ test('/api/links returns validated data with icon hints', async () => {
   assert.strictEqual(body.tabs[0].categories[0].links[0]['icon-hint'], 'github');
 });
 
-test('validateData rejects malformed upstream data', () => {
+test('validateData rejects malformed structure and drops invalid links', () => {
   assert.throws(() => validateData({}));
-  assert.throws(() => validateData({ tabs: [{ tab: 'x', categories: [{ category: 'c', links: [{ name: 'n', url: 'u', 'logo-hint': 5 }] }] }] }));
-  assert.throws(() => validateData({ tabs: [{ tab: 'x', categories: [{ category: 'c', links: [{ name: 1, url: 'u' }] }] }] }));
+  assert.throws(() => validateData({ tabs: [{ tab: 'x', categories: [{ category: 'c', links: 'nope' }] }] }));
+  // invalid links are dropped, valid ones kept
+  const good = { name: 'n', url: 'u' };
+  const data = validateData({ tabs: [{ tab: 'x', categories: [{ category: 'c', links: [good, { name: 'n', utl: 'typo' }, { name: 1, url: 'u' }, { ...good, 'logo-hint': 5 }] }] }] });
+  assert.deepStrictEqual(data.tabs[0].categories[0].links, [good]);
   assert.ok(validateData({ tabs: [] }));
 });
 

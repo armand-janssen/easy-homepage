@@ -11,13 +11,24 @@ async function fetchWithNativeFetch(url, options = {}) {
 // Upstream JSON is a trust boundary: reject shapes the server and frontend can't handle
 function validateData(data) {
   const isStr = (v) => typeof v === 'string';
+  const validLink = (link) => link && isStr(link.name) && isStr(link.url) &&
+    ['logo-hint', 'icon-hint'].every(hint => link[hint] === undefined || isStr(link[hint]));
   const ok = data && Array.isArray(data.tabs) && data.tabs.every(tab =>
     tab && isStr(tab.tab) && Array.isArray(tab.categories) && tab.categories.every(cat =>
-      cat && isStr(cat.category) && Array.isArray(cat.links) && cat.links.every(link =>
-        link && isStr(link.name) && isStr(link.url) &&
-        ['logo-hint', 'icon-hint'].every(hint => link[hint] === undefined || isStr(link[hint])))));
+      cat && isStr(cat.category) && Array.isArray(cat.links)));
   if (!ok) {
-    throw new Error('Invalid links data: expected tabs[].categories[].links[] with string name and url');
+    throw new Error('Invalid links data: expected tabs[].categories[].links[]');
+  }
+  // One bad link (e.g. a typo in a key) must not take the whole page down: skip it and say which
+  for (const tab of data.tabs) {
+    for (const cat of tab.categories) {
+      cat.links = cat.links.filter(link => {
+        if (!validLink(link)) {
+          console.warn(`Skipping invalid link in "${tab.tab}" > "${cat.category}": ${JSON.stringify(link)} (needs string name and url)`);
+        }
+        return validLink(link);
+      });
+    }
   }
   return data;
 }
