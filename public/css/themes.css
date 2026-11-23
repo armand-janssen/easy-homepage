@@ -128,14 +128,16 @@ body { background: var(--page); color: var(--text); }
 .picker-button:hover, .picker-button[aria-expanded="true"] { border-color: var(--accent); }
 .picker-menu {
     position: absolute; right: 0; top: calc(100% + 0.4rem); z-index: 50; min-width: 13rem;
-    max-height: min(70vh, 32rem); overflow-y: auto; padding: 0.35rem;
+    max-height: 85vh; overflow-y: auto; padding: 0.35rem;
     background: var(--card); border: 1px solid var(--border); border-radius: 0.75rem;
     box-shadow: 0 12px 32px rgba(0, 0, 0, 0.25);
 }
 /* long lists flow into two columns so nothing needs scrolling */
 .picker-menu-wide { columns: 2; column-gap: 0.35rem; min-width: 24rem; }
 .picker-menu-wide .picker-option { break-inside: avoid; }
-.picker-option { width: 100%; padding: 0.55rem 0.7rem; border-radius: 0.5rem; text-align: left; }
+/* very long lists (19+) get a third column */
+.picker-menu-wide:has(.picker-option:nth-child(19)) { columns: 3; min-width: min(36rem, 94vw); }
+.picker-option { width: 100%; padding: 0.45rem 0.7rem; border-radius: 0.5rem; text-align: left; }
 .picker-option:hover, .picker-option:focus-visible { background: var(--accent-soft); outline: none; }
 .picker-option[aria-selected="true"] { font-weight: 700; }
 .picker-option[aria-selected="true"]::after { content: '✓'; margin-left: auto; color: var(--accent); }
@@ -748,3 +750,47 @@ body { background: var(--page); color: var(--text); }
 .layout-starwars .link-item:hover::after, .layout-starwars .link-item:focus-within::after { transform: scaleX(1); }
 .layout-starwars .link-item:hover a { color: #ffffff; text-shadow: 0 0 8px var(--saber); }
 @media (prefers-reduced-motion: reduce) { .layout-starwars .link-item::after { transition: none; } }
+
+/* ---- Lord of the Rings: an old map on parchment. Ink headings, a numbered index, and a gold ring on hover ---- */
+.layout-lotr {
+    --page: #e8d5a3; --block: #dcc68d; --card: #ecdcb0; --border: #8a6a3a;
+    --text: #3a2614; --muted: #7a5c36; --accent: #8b1a10; --accent-soft: #d9bf85;
+    font-family: 'Palatino Linotype', Palatino, 'Book Antiqua', Georgia, serif;
+    /* stains, then a burnt vignette, over the parchment */
+    background:
+        radial-gradient(ellipse 30% 20% at 15% 25%, rgba(122, 82, 36, 0.14), transparent),
+        radial-gradient(ellipse 25% 30% at 85% 70%, rgba(122, 82, 36, 0.12), transparent),
+        radial-gradient(ellipse at center, transparent 55%, rgba(74, 44, 14, 0.5) 100%),
+        #e8d5a3;
+    background-attachment: fixed;
+}
+.layout-lotr .chrome { background: rgba(220, 198, 141, 0.85); border-color: var(--border); border-bottom-style: double; border-bottom-width: 4px; }
+.layout-lotr #app-title { font-style: italic; font-weight: 700; font-size: 1.7rem; letter-spacing: 0.02em; }
+.layout-lotr #app-title::before, .layout-lotr #app-title::after { content: '\2766'; margin: 0 0.5rem; color: var(--accent); font-style: normal; }
+.layout-lotr header #refresh-btn svg, .layout-lotr header #theme-toggle svg { color: var(--accent); }
+.layout-lotr .tab-button { font-variant: small-caps; font-size: 1.05rem; letter-spacing: 0.08em; }
+.layout-lotr .category-column { counter-reset: entry; }
+.layout-lotr .category-title {
+    margin-bottom: 0.4rem; padding-bottom: 0.3rem; border-bottom: 3px double var(--border);
+    font-variant: small-caps; font-size: 1.35rem; font-weight: 700; letter-spacing: 0.06em;
+}
+.layout-lotr .category-title::first-letter { font-size: 1.9rem; color: var(--accent); }
+.layout-lotr .link-item { counter-increment: entry; }
+.layout-lotr .link-item a { gap: 0.6rem; padding: 0.3rem 0.25rem; }
+.layout-lotr .link-item .link-name { font-size: 1rem; }
+/* dotted leader and a roman numeral, like a book index */
+.layout-lotr .link-item a::after {
+    content: counter(entry, upper-roman); flex: 1; text-align: right; color: var(--muted); font-size: 0.8rem;
+    background: radial-gradient(circle, var(--muted) 1px, transparent 1.2px) left 0.8em / 7px 2px repeat-x;
+}
+/* the logo sits in a ring that turns to glowing gold on hover */
+.layout-lotr .link-item a > div {
+    flex: none; padding: 3px; border-radius: 50%; border: 2px solid rgba(138, 106, 58, 0.4); line-height: 0;
+    transition: border-color 0.3s, box-shadow 0.3s;
+}
+.layout-lotr .link-item .logo-img { border-radius: 50%; }
+.layout-lotr .link-item:hover a > div, .layout-lotr .link-item a:focus-visible > div {
+    border-color: #e0a200; box-shadow: 0 0 6px 2px #f5b301, 0 0 16px 4px rgba(214, 70, 10, 0.6), inset 0 0 4px #f5b301;
+}
+.layout-lotr .link-item:hover .link-name { color: var(--accent); font-style: italic; }
+@media (prefers-reduced-motion: reduce) { .layout-lotr .link-item a > div { transition: none; } }
