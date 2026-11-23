@@ -469,6 +469,8 @@ Customize your links by modifying the JSON structure:
 
 The application uses Tailwind CSS for styling:
 
+The stylesheet is built from the classes used in `public/` with `pnpm build:css` (output: `public/css/tailwind.css`, not committed). `pnpm dev` and the Docker build run it for you; run it yourself before `pnpm start` from source.
+
 - Modify `public/index.html` for layout changes
 - Update `public/js/main.js` for functionality changes
 - Use Tailwind utility classes for styling

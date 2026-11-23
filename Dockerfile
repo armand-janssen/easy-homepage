@@ -9,12 +9,14 @@ RUN npm install -g pnpm@8.15.0
 # Copy package files
 COPY package.json pnpm-lock.yaml ./
 
-# Install dependencies
-RUN pnpm install --frozen-lockfile --prod
+# Build the stylesheet (needs dev dependencies), then keep only production dependencies
+RUN pnpm install --frozen-lockfile
+COPY public/ ./public/
+COPY tailwind.config.js ./
+RUN pnpm build:css && pnpm prune --prod
 
 # Copy source code
 COPY src/ ./src/
-COPY public/ ./public/
 
 # Stamp the build date shown in the GUI
 RUN date -u +%Y-%m-%d > BUILD_DATE
