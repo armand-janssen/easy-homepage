@@ -63,7 +63,8 @@ class LinkHomepage {
             { value: 'f1', label: 'F1' },
             { value: 'f1-redbull', label: 'F1 Red Bull' },
             { value: 'f1-ferrari', label: 'F1 Ferrari' },
-            { value: 'cycling', label: 'Road Cycling' }
+            { value: 'cycling', label: 'Road Cycling' },
+            { value: 'starwars', label: 'Star Wars' }
         ], (layout) => {
             this.currentLayout = layout;
             // Signature layouts bring their own palette (so the colour picker is switched off) and are
@@ -85,7 +86,8 @@ class LinkHomepage {
                 'f1': ['reset', 'f1'],
                 'f1-redbull': ['reset', 'f1', 'f1-redbull'],
                 'f1-ferrari': ['reset', 'f1', 'f1-ferrari'],
-                'cycling': ['reset', 'cycling']
+                'cycling': ['reset', 'cycling'],
+                'starwars': ['reset', 'starwars']
             };
             const parts = signature[layout] ? [...signature[layout], 'signature'] : [layout];
             document.body.classList.remove(...[...document.body.classList].filter(c => c.startsWith('layout-')));
