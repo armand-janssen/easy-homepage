@@ -9,6 +9,9 @@ lerna-debug.log*
 logos/
 .DS_Store
 tmp-sites.json
+
+# Built by `pnpm build:css`
+public/css/tailwind.css
 .env
 
 # Diagnostic reports (https://nodejs.org/api/report.html)

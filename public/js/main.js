@@ -7,7 +7,6 @@ class LinkHomepage {
         this.themeToggle = document.getElementById('theme-toggle');
         this.refreshBtn = document.getElementById('refresh-btn');
         this.retryBtn = document.getElementById('retry-btn');
-        this.layoutSelector = document.getElementById('layout-selector');
         this.appTitle = document.getElementById('app-title');
         this.loadingState = document.getElementById('loading-state');
         this.errorState = document.getElementById('error-state');
@@ -21,6 +20,7 @@ class LinkHomepage {
     async init() {
         this.setupThemeToggle();
         this.setupLayoutSelector();
+        this.setupColorSelector();
         this.setupRefreshButton();
         this.setupRetryButton();
         await this.loadData();
@@ -39,366 +39,182 @@ class LinkHomepage {
     }
 
     setupLayoutSelector() {
-        // Load saved layout or default to default
-        const savedLayout = localStorage.getItem('layout') || 'default';
-        this.currentLayout = savedLayout;
-        this.layoutSelector.value = savedLayout;
-        
-        // Apply initial layout
-        this.applyLayout(savedLayout);
-
-        this.layoutSelector.addEventListener('change', (e) => {
-            const selectedLayout = e.target.value;
-            this.currentLayout = selectedLayout;
-            localStorage.setItem('layout', selectedLayout);
-            this.applyLayout(selectedLayout);
-            
-            // Re-render content with new layout
+        this.createPicker('layout-picker', 'Layout', 'layout', [
+            { value: 'default', label: 'Cards' },
+            { value: 'masonry', label: 'Masonry' },
+            { value: 'columns', label: 'Columns' },
+            { value: 'columns-vertical', label: 'Columns Vertical' },
+            { value: 'creative', label: 'Creative' },
+            { value: 'launcher', label: 'Launcher' },
+            { value: 'terminal', label: 'Terminal' },
+            { value: 'matrix', label: 'Matrix' },
+            { value: 'matrix-icons', label: 'Matrix Icons' },
+            { value: 'matrix-rain', label: 'Matrix Rain' },
+            { value: 'lcars', label: 'LCARS' },
+            { value: 'lcars-icons', label: 'LCARS Icons' },
+            { value: 'player', label: 'Retro Player' },
+            { value: 'sonar', label: 'Red October' },
+            { value: 'redalert', label: 'Red Alert' },
+            { value: 'robot', label: 'Mr. Robot' },
+            { value: 'gta5', label: 'GTA V' },
+            { value: 'gta6', label: 'GTA VI' },
+            { value: 'kart', label: 'Mario Kart' },
+            { value: 'kong', label: 'Donkey Kong' },
+            { value: 'f1', label: 'F1' },
+            { value: 'f1-redbull', label: 'F1 Red Bull' },
+            { value: 'f1-ferrari', label: 'F1 Ferrari' },
+            { value: 'cycling', label: 'Road Cycling' }
+        ], (layout) => {
+            this.currentLayout = layout;
+            // Signature layouts bring their own palette (so the colour picker is switched off) and are
+            // composed from building-block classes styled in /css/themes.css
+            const signature = {
+                'matrix': ['terminal', 'matrix'],
+                'matrix-icons': ['terminal', 'matrix', 'icons'],
+                'matrix-rain': ['matrix', 'streams'],
+                'lcars': ['lcars'],
+                'lcars-icons': ['lcars', 'icons'],
+                'player': ['player'],
+                'sonar': ['sonar'],
+                'redalert': ['redalert'],
+                'robot': ['terminal', 'robot'],
+                'gta5': ['reset', 'gta5'],
+                'gta6': ['reset', 'gta6'],
+                'kart': ['reset', 'kart'],
+                'kong': ['reset', 'kong'],
+                'f1': ['reset', 'f1'],
+                'f1-redbull': ['reset', 'f1', 'f1-redbull'],
+                'f1-ferrari': ['reset', 'f1', 'f1-ferrari'],
+                'cycling': ['reset', 'cycling']
+            };
+            const parts = signature[layout] ? [...signature[layout], 'signature'] : [layout];
+            document.body.classList.remove(...[...document.body.classList].filter(c => c.startsWith('layout-')));
+            document.body.classList.add(...parts.map(name => `layout-${name}`));
+            document.getElementById('color-picker').inert = layout in signature;
+            this.toggleMatrixRain(parts.includes('matrix'));
             if (this.data) {
                 this.renderTabContent();
             }
         });
     }
 
-    applyLayout(layoutName) {
-        // Remove all layout classes
-        document.body.classList.remove('layout-default', 'layout-columns', 'layout-columns-vertical', 'layout-creative');
-        
-        // Add current layout class
-        document.body.classList.add(`layout-${layoutName}`);
-        
-        // Inject layout-specific CSS
-        this.injectLayoutCSS(layoutName);
+    setupColorSelector() {
+        // Colour themes are CSS variables keyed on <html data-color>; light/dark comes from the theme toggle
+        const colors = ['Default', 'Slate', 'Nord', 'Mocha', 'Ocean', 'Mint', 'Green', 'Amber', 'Sunset', 'Rose', 'Purple', 'Neon'];
+        this.createPicker('color-picker', 'Colour theme', 'color',
+            colors.map(label => ({ value: label.toLowerCase(), label, swatch: true })),
+            (color) => { document.documentElement.dataset.color = color; });
     }
 
-    injectLayoutCSS(layoutName) {
-        // Remove existing layout styles
-        const existingStyle = document.getElementById('layout-styles');
-        if (existingStyle) {
-            existingStyle.remove();
-        }
+    // Matrix layout: glyphs falling on a canvas behind the content
+    toggleMatrixRain(on) {
+        cancelAnimationFrame(this.rainFrame);
+        this.rainCanvas?.remove();
+        this.rainCanvas = null;
+        if (!on || window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
 
-        const style = document.createElement('style');
-        style.id = 'layout-styles';
-        
-        if (layoutName === 'columns') {
-            style.textContent = `
-                .layout-columns {
-                    --primary-color: #8b5cf6;
-                    --primary-hover: #7c3aed;
-                    --primary-light: #a78bfa;
-                    --primary-dark: #6d28d9;
-                    --bg-primary: #faf5ff;
-                    --bg-secondary: #f3e8ff;
-                    --text-primary: #581c87;
-                    --text-secondary: #7c2d12;
-                    --border-color: #c4b5fd;
-                }
-                
-                .layout-columns.dark {
-                    --bg-primary: #1e1b4b;
-                    --bg-secondary: #312e81;
-                    --text-primary: #e0e7ff;
-                    --text-secondary: #c7d2fe;
-                    --border-color: #6366f1;
-                }
-                
-                .layout-columns #tab-content {
-                    display: flex !important;
-                    flex-direction: row !important;
-                    gap: 1.5rem !important;
-                    flex-wrap: nowrap !important;
-                    align-items: flex-start !important;
-                    width: 100% !important;
-                    overflow-x: auto !important;
-                    max-width: none !important;
-                }
-                
-                .layout-columns .max-w-7xl {
-                    max-width: none !important;
-                }
-                
-                .layout-columns .category-column {
-                    flex: 0 0 auto;
-                    width: 280px;
-                    background: var(--bg-secondary);
-                    border-radius: 12px;
-                    padding: 1.5rem;
-                    border: 1px solid var(--border-color);
-                }
-                
-                .layout-columns .category-title {
-                    color: var(--text-primary);
-                    font-size: 1.25rem;
-                    font-weight: 600;
-                    margin-bottom: 1rem;
-                    padding-bottom: 0.5rem;
-                    border-bottom: 2px solid var(--primary-color);
-                }
-                
-                .layout-columns .links-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.75rem;
-                }
-                
-                .layout-columns .link-item {
-                    background: var(--bg-primary);
-                    border: 1px solid var(--border-color);
-                    border-radius: 8px;
-                    padding: 0.75rem;
-                    transition: all 0.2s ease;
-                    cursor: pointer;
-                }
-                
-                .layout-columns .link-item:hover {
-                    background: var(--primary-light);
-                    transform: translateX(4px);
-                    border-color: var(--primary-color);
-                }
-                
-                .layout-columns .link-item a {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    text-decoration: none;
-                    color: var(--text-primary);
-                }
-                
-                .layout-columns .link-item .logo-img {
-                    width: 24px;
-                    height: 24px;
-                }
-                
-                .layout-columns .link-item .link-name {
-                    font-weight: 500;
-                    font-size: 0.9rem;
-                }
-            `;
-        } else if (layoutName === 'columns-vertical') {
-            style.textContent = `
-                .layout-columns-vertical {
-                    --primary-color: #8b5cf6;
-                    --primary-hover: #7c3aed;
-                    --primary-light: #a78bfa;
-                    --primary-dark: #6d28d9;
-                    --bg-primary: #faf5ff;
-                    --bg-secondary: #f3e8ff;
-                    --text-primary: #581c87;
-                    --text-secondary: #7c2d12;
-                    --border-color: #c4b5fd;
-                }
-                
-                .layout-columns-vertical.dark {
-                    --bg-primary: #1e1b4b;
-                    --bg-secondary: #312e81;
-                    --text-primary: #e0e7ff;
-                    --text-secondary: #c7d2fe;
-                    --border-color: #6366f1;
-                }
-                
-                .layout-columns-vertical #tab-content {
-                    display: flex !important;
-                    flex-direction: row !important;
-                    gap: 1rem !important;
-                    flex-wrap: wrap !important;
-                    align-items: flex-start !important;
-                    width: 100% !important;
-                    overflow-y: auto !important;
-                    max-width: none !important;
-                    height: calc(100vh - 200px) !important;
-                }
-                
-                .layout-columns-vertical .max-w-7xl {
-                    max-width: none !important;
-                }
-                
-                .layout-columns-vertical .category-column {
-                    flex: 0 0 auto;
-                    width: 300px;
-                    background: var(--bg-secondary);
-                    border-radius: 12px;
-                    padding: 1rem;
-                    border: 1px solid var(--border-color);
-                }
-                
-                .layout-columns-vertical .category-title {
-                    color: var(--text-primary);
-                    font-size: 1.25rem;
-                    font-weight: 600;
-                    margin-bottom: 1rem;
-                    padding-bottom: 0.5rem;
-                    border-bottom: 2px solid var(--primary-color);
-                }
-                
-                .layout-columns-vertical .links-list {
-                    display: flex;
-                    flex-direction: column;
-                    gap: 0.75rem;
-                }
-                
-                .layout-columns-vertical .link-item {
-                    background: var(--bg-primary);
-                    border: 1px solid var(--border-color);
-                    border-radius: 8px;
-                    padding: 0.75rem;
-                    transition: all 0.2s ease;
-                    cursor: pointer;
-                }
-                
-                .layout-columns-vertical .link-item:hover {
-                    background: var(--primary-light);
-                    transform: translateX(4px);
-                    border-color: var(--primary-color);
-                }
-                
-                .layout-columns-vertical .link-item a {
-                    display: flex;
-                    align-items: center;
-                    gap: 0.75rem;
-                    text-decoration: none;
-                    color: var(--text-primary);
-                }
-                
-                .layout-columns-vertical .link-item .logo-img {
-                    width: 24px;
-                    height: 24px;
-                }
-                
-                .layout-columns-vertical .link-item .link-name {
-                    font-weight: 500;
-                    font-size: 0.9rem;
-                }
-            `;
-        } else if (layoutName === 'creative') {
-            style.textContent = `
-                .layout-creative {
-                    --primary-color: #059669;
-                    --primary-hover: #047857;
-                    --primary-light: #10b981;
-                    --primary-dark: #065f46;
-                    --accent-color: #0d9488;
-                    --bg-primary: #ecfdf5;
-                    --bg-secondary: #d1fae5;
-                    --text-primary: #064e3b;
-                    --text-secondary: #065f46;
-                    --border-color: #6ee7b7;
-                }
-                
-                .layout-creative.dark {
-                    --bg-primary: #064e3b;
-                    --bg-secondary: #065f46;
-                    --text-primary: #a7f3d0;
-                    --text-secondary: #6ee7b7;
-                    --border-color: #10b981;
-                }
-                
-                .layout-creative .tab-content {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-                    gap: 2rem;
-                }
-                
-                .layout-creative .category-section {
-                    background: linear-gradient(135deg, var(--bg-secondary), var(--bg-primary));
-                    border-radius: 16px;
-                    padding: 2rem;
-                    border: 2px solid var(--border-color);
-                    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-                    position: relative;
-                    overflow: hidden;
-                }
-                
-                .layout-creative .category-section::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    height: 4px;
-                    background: linear-gradient(90deg, var(--primary-color), var(--accent-color));
-                }
-                
-                .layout-creative .category-title {
-                    color: var(--text-primary);
-                    font-size: 1.5rem;
-                    font-weight: 700;
-                    margin-bottom: 1.5rem;
-                    text-align: center;
-                    position: relative;
-                }
-                
-                .layout-creative .links-grid {
-                    display: grid;
-                    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-                    gap: 1rem;
-                }
-                
-                .layout-creative .link-card {
-                    background: var(--bg-primary);
-                    border: 1px solid var(--border-color);
-                    border-radius: 12px;
-                    padding: 1.25rem;
-                    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-                    cursor: pointer;
-                    position: relative;
-                    overflow: hidden;
-                }
-                
-                .layout-creative .link-card::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: -100%;
-                    width: 100%;
-                    height: 100%;
-                    background: linear-gradient(90deg, transparent, rgba(16, 185, 129, 0.1), transparent);
-                    transition: left 0.5s ease;
-                }
-                
-                .layout-creative .link-card:hover::before {
-                    left: 100%;
-                }
-                
-                .layout-creative .link-card:hover {
-                    transform: translateY(-4px) scale(1.02);
-                    box-shadow: 0 12px 24px rgba(16, 185, 129, 0.2);
-                    border-color: var(--primary-color);
-                }
-                
-                .layout-creative .link-card a {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    text-align: center;
-                    text-decoration: none;
-                    color: var(--text-primary);
-                    gap: 0.75rem;
-                }
-                
-                .layout-creative .link-card .logo-img {
-                    width: 40px;
-                    height: 40px;
-                    border-radius: 8px;
-                    background: var(--bg-secondary);
-                    padding: 8px;
-                }
-                
-                .layout-creative .link-card .link-name {
-                    font-weight: 600;
-                    font-size: 0.95rem;
-                    line-height: 1.2;
-                }
-                
-                .layout-creative .link-card .link-url {
-                    font-size: 0.75rem;
-                    color: var(--text-secondary);
-                    opacity: 0.8;
-                }
-            `;
-        }
-        
-        document.head.appendChild(style);
+        const canvas = this.rainCanvas = document.createElement('canvas');
+        canvas.className = 'matrix-rain';
+        canvas.setAttribute('aria-hidden', 'true');
+        document.body.prepend(canvas);
+
+        const ctx = canvas.getContext('2d');
+        const size = 16;
+        let drops = [];
+        let last = 0;
+        const draw = (time) => {
+            this.rainFrame = requestAnimationFrame(draw);
+            if (time - last < 60) return; // ~16 fps is plenty and keeps the CPU idle
+            last = time;
+            if (canvas.width !== window.innerWidth || canvas.height !== window.innerHeight) {
+                canvas.width = window.innerWidth;
+                canvas.height = window.innerHeight;
+                drops = Array.from({ length: Math.ceil(canvas.width / size) }, () => Math.random() * -60);
+            }
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.08)'; // fade the previous frame into trails
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.font = `${size}px monospace`;
+            drops.forEach((y, i) => {
+                ctx.fillStyle = Math.random() > 0.975 ? '#d8ffe0' : '#00ff41';
+                ctx.fillText(String.fromCharCode(0x30A0 + Math.random() * 96), i * size, y * size);
+                drops[i] = y * size > canvas.height && Math.random() > 0.975 ? 0 : y + 1;
+            });
+        };
+        this.rainFrame = requestAnimationFrame(draw);
+    }
+
+    // Custom dropdown: the native <select> popup opens on top of the control and gets clipped at the window edge
+    createPicker(id, label, storageKey, options, onChange) {
+        const root = document.getElementById(id);
+        const stored = localStorage.getItem(storageKey);
+        const fallback = options.find(option => option.value === 'default');
+        options = [...options].sort((a, b) => a.label.localeCompare(b.label));
+        let current = options.find(option => option.value === stored) || fallback;
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'picker-button';
+        button.setAttribute('aria-haspopup', 'listbox');
+        button.setAttribute('aria-label', label);
+
+        const menu = document.createElement('div');
+        menu.className = options.length > 8 ? 'picker-menu picker-menu-wide' : 'picker-menu';
+        menu.setAttribute('role', 'listbox');
+        menu.setAttribute('aria-label', label);
+
+        const setOpen = (open) => {
+            menu.hidden = !open;
+            button.setAttribute('aria-expanded', String(open));
+        };
+        const swatch = (option) => {
+            const dot = document.createElement('span');
+            dot.className = 'picker-swatch';
+            dot.dataset.color = option.value;
+            return dot;
+        };
+        const render = () => {
+            button.replaceChildren(...(current.swatch ? [swatch(current)] : []), current.label);
+            items.forEach((item, index) => item.setAttribute('aria-selected', String(options[index] === current)));
+        };
+        const items = options.map(option => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'picker-option';
+            item.setAttribute('role', 'option');
+            item.append(...(option.swatch ? [swatch(option)] : []), option.label);
+            item.addEventListener('click', () => {
+                current = option;
+                localStorage.setItem(storageKey, option.value);
+                setOpen(false);
+                render();
+                onChange(option.value);
+                button.focus();
+            });
+            menu.appendChild(item);
+            return item;
+        });
+
+        button.addEventListener('click', () => setOpen(menu.hidden));
+        document.addEventListener('click', (event) => {
+            if (!root.contains(event.target)) setOpen(false);
+        });
+        root.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape') {
+                setOpen(false);
+                button.focus();
+            } else if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+                event.preventDefault();
+                setOpen(true);
+                const step = event.key === 'ArrowDown' ? 1 : -1;
+                const from = items.includes(document.activeElement) ? items.indexOf(document.activeElement) : options.indexOf(current) - step;
+                items[(from + step + items.length) % items.length].focus();
+            }
+        });
+
+        root.append(button, menu);
+        setOpen(false);
+        render();
+        onChange(current.value);
     }
 
     setupRefreshButton() {
@@ -481,10 +297,10 @@ class LinkHomepage {
         // Create a loading message banner
         const loadingBanner = document.createElement('div');
         loadingBanner.id = 'logo-loading-banner';
-        loadingBanner.className = 'bg-blue-50 border border-blue-200 text-blue-800 px-4 py-3 rounded-md mb-4 dark:bg-blue-900 dark:border-blue-700 dark:text-blue-200';
+        loadingBanner.className = 'logo-banner px-4 py-2 text-sm';
         loadingBanner.innerHTML = `
             <div class="flex items-center">
-                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-3"></div>
+                <div class="animate-spin rounded-full h-4 w-4 border-b-2 border-current mr-3"></div>
                 <span>Logos are being processed in the background. The page will update automatically when ready.</span>
             </div>
         `;
@@ -543,7 +359,7 @@ class LinkHomepage {
         
         this.data.tabs.forEach((tab, index) => {
             const tabButton = document.createElement('button');
-            tabButton.className = `tab-button px-3 py-4 text-sm font-medium border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 dark:text-gray-400 dark:hover:text-gray-300 dark:hover:border-gray-600 ${index === 0 ? 'active' : ''}`;
+            tabButton.className = `tab-button px-3 py-4 text-sm font-medium border-b-2 border-transparent ${index === 0 ? 'active' : ''}`;
             tabButton.textContent = tab.tab;
             tabButton.addEventListener('click', () => this.switchTab(index));
             
@@ -574,14 +390,13 @@ class LinkHomepage {
         const activeTabData = this.data.tabs[this.activeTab];
         this.tabContent.innerHTML = '';
 
-        if (this.currentLayout === 'columns') {
-            this.renderColumnsLayout(activeTabData);
-        } else if (this.currentLayout === 'columns-vertical') {
-            this.renderColumnsLayout(activeTabData);
+        if (this.currentLayout === 'default') {
+            this.renderDefaultLayout(activeTabData);
         } else if (this.currentLayout === 'creative') {
             this.renderCreativeLayout(activeTabData);
         } else {
-            this.renderDefaultLayout(activeTabData);
+            // columns, columns-vertical, masonry, launcher, terminal: same markup, styled per layout in themes.css
+            this.renderColumnsLayout(activeTabData);
         }
     }
 
@@ -611,7 +426,7 @@ class LinkHomepage {
         section.className = 'mb-8 animate-fade-in';
 
         const title = document.createElement('h2');
-        title.className = 'text-xl font-semibold text-gray-900 dark:text-white mb-4';
+        title.className = 'section-title text-xl font-semibold mb-4';
         title.textContent = category.category;
 
         const grid = document.createElement('div');
@@ -677,7 +492,7 @@ class LinkHomepage {
         card.href = this.safeUrl(link.url);
         card.target = '_blank';
         card.rel = 'noopener noreferrer';
-        card.className = 'link-card bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg p-4 flex items-center space-x-3 border border-gray-200 dark:border-gray-700 animate-slide-up';
+        card.className = 'link-card rounded-lg shadow-md hover:shadow-lg p-4 flex items-center space-x-3 animate-slide-up';
 
         // Logo
         const logoContainer = document.createElement('div');
@@ -702,11 +517,11 @@ class LinkHomepage {
         content.className = 'flex-1 min-w-0';
 
         const name = document.createElement('h3');
-        name.className = 'text-sm font-medium text-gray-900 dark:text-white truncate';
+        name.className = 'text-sm font-medium truncate';
         name.textContent = link.name;
 
         const url = document.createElement('p');
-        url.className = 'text-xs text-gray-500 dark:text-gray-400 truncate';
+        url.className = 'link-url text-xs truncate';
         url.textContent = this.extractDomain(link.url);
 
         content.appendChild(name);
