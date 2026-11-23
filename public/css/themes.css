@@ -705,3 +705,55 @@ body { background: var(--page); color: var(--text); }
     background: #ffffff; border: 1.5px solid #1c1c1c; border-radius: 3px; font: 800 0.75rem ui-monospace, Menlo, monospace;
 }
 .layout-cycling .link-item .link-name { font-size: 0.95rem; font-weight: 600; }
+
+/* ---- Star Wars: the targeting computer. Amber vector panels, red readouts, and a trench grid rushing past ---- */
+.layout-starwars {
+    --page: #000000; --block: #000000; --card: #0a0600; --border: #ffb000;
+    --text: #ffb000; --muted: #b36b00; --accent: #ff2a1a; --accent-soft: #2b0a00;
+    font-family: 'Arial Narrow', 'Helvetica Neue Condensed', ui-monospace, Menlo, monospace;
+    font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em;
+    background: radial-gradient(ellipse at 50% 100%, #2b1400, #000000 65%) fixed;
+    counter-reset: target;
+}
+/* the trench: a perspective floor grid, fixed behind the page */
+.layout-starwars::after {
+    content: ''; position: fixed; z-index: -1; left: -50%; right: -50%; bottom: 0; height: 55vh; pointer-events: none;
+    background:
+        repeating-linear-gradient(90deg, #ffb000 0 2px, transparent 2px 80px),
+        repeating-linear-gradient(0deg, #ffb000 0 2px, transparent 2px 60px);
+    transform: perspective(320px) rotateX(62deg); transform-origin: bottom; opacity: 0.3;
+    -webkit-mask-image: linear-gradient(transparent, #000 70%); mask-image: linear-gradient(transparent, #000 70%);
+    animation: starwars-trench 1.2s linear infinite;
+}
+@keyframes starwars-trench { to { background-position: 0 0, 0 60px; } }
+@media (prefers-reduced-motion: reduce) { .layout-starwars::after { animation: none; } }
+.layout-starwars .chrome { background: rgba(0, 0, 0, 0.85); border-color: var(--muted); }
+.layout-starwars #app-title { letter-spacing: 0.25em; text-shadow: 0 0 10px rgba(255, 176, 0, 0.6); }
+.layout-starwars #app-title::before { content: '\25C9  '; color: var(--accent); }
+.layout-starwars .tab-button.active { color: var(--accent); border-bottom-color: var(--accent); }
+.layout-starwars .category-column {
+    counter-increment: target; padding: 6px; background: rgba(0, 0, 0, 0.85);
+    border: 2px solid var(--text); box-shadow: 0 0 14px rgba(255, 176, 0, 0.25), inset 0 0 0 4px #000000, inset 0 0 0 5px var(--muted);
+    clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+}
+.layout-starwars .category-title {
+    display: flex; justify-content: space-between; align-items: center; gap: 0.5rem;
+    margin-bottom: 4px; padding: 0.3rem 0.6rem 0.3rem 1rem; background: var(--text); color: #000000; font-size: 1rem; font-weight: 800;
+}
+/* red range readout, like the countdown on the scope */
+.layout-starwars .category-title::after {
+    content: counter(target, decimal-leading-zero) '0' counter(target) '7'; flex: none; padding: 0 0.4rem;
+    background: #000000; color: var(--accent); font: 700 0.9rem ui-monospace, Menlo, monospace; letter-spacing: 0.15em;
+    text-shadow: 0 0 6px var(--accent);
+}
+.layout-starwars .link-item + .link-item { border-top: 1px dashed rgba(255, 176, 0, 0.35); }
+.layout-starwars .link-item a { padding: 0.4rem 0.6rem; color: var(--text); }
+.layout-starwars .link-item a::after { content: '[ \00B7 ]'; margin-left: auto; flex: none; color: var(--muted); font-family: ui-monospace, Menlo, monospace; letter-spacing: 0; }
+.layout-starwars .link-item .link-name { font-size: 0.85rem; text-shadow: 0 0 6px rgba(255, 176, 0, 0.45); }
+.layout-starwars .link-item .logo-img { filter: grayscale(1) sepia(1) saturate(5) hue-rotate(-12deg) brightness(1.05); }
+/* locked on */
+.layout-starwars .link-item:hover { background: var(--text); }
+.layout-starwars .link-item:hover a { color: #000000; }
+.layout-starwars .link-item:hover .link-name { text-shadow: none; }
+.layout-starwars .link-item:hover a::after { content: '[ + ]'; color: var(--accent); font-weight: 900; }
+.layout-starwars .link-item:hover .logo-img { filter: grayscale(1) contrast(1.4); }
